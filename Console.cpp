@@ -144,7 +144,6 @@ void Console::FWriteBold(const char* format, ...)
 
 void Console::WaitInput()
 {
-	char c;
 	std::cout << "Press anything to continue..." << std::endl;
 	getchar();
 }

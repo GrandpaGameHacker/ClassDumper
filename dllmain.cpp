@@ -1,4 +1,5 @@
 #include "dllmain.h"
+#include <chrono>
 
 Console g_console = Console(CONSOLE_TITLE);
 
@@ -22,7 +23,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 void DllThread(HMODULE hModule)
 {
-    g_console.Write("[+] DLL Injected");
+    g_console.Write(HeadingArt);
+    auto start = chrono::high_resolution_clock::now();
     auto moduleList = GetModuleList(hModule); // Skip our module, we dont need that one
     if (moduleList.empty()){
         g_console.WriteBold("GetModuleList Failed!\n");
@@ -49,6 +51,8 @@ void DllThread(HMODULE hModule)
         }
         LogModuleEnd(target_module->szModule);
     }
+    auto end = chrono::high_resolution_clock::now();
+    g_console.FWrite("[+] Took %d milliseconds\n", chrono::duration_cast<chrono::milliseconds>(end - start).count());
     g_console.WaitInput();
     CloseLogs();
     FreeLibraryAndExitThread(hModule, -1);
