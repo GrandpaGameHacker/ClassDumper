@@ -31,5 +31,7 @@ public:
 	void WriteBold(const std::string& str);
 	void FWriteBold(const char* format, ...);
 
+	void WaitInput();
+
 };
 

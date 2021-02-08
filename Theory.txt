@@ -1,4 +1,4 @@
-# Idea 1: Reverse lookup improved
+# Idea 1: Reverse lookup
 If we scan for ".?AVtype_info@@" and extract the type info vftable address
 we can find all TypeDescriptors with a big ol scan.
 

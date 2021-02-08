@@ -141,3 +141,10 @@ void Console::FWriteBold(const char* format, ...)
 	va_end(args);
 	SetAttribute(CONSTYLE_DEFAULT);
 }
+
+void Console::WaitInput()
+{
+	char c;
+	std::cout << "Press anything to continue..." << std::endl;
+	getchar();
+}

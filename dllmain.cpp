@@ -29,23 +29,27 @@ void DllThread(HMODULE hModule)
         Sleep(5000);
         FreeLibraryAndExitThread(hModule, -1);
     }
-    g_console.FWrite("[i] %s has %zu loaded modules\n", moduleList[0]->szModule, moduleList.size());
+    g_console.FWrite("[i] %s has %zu non-system modules\n", moduleList[0]->szModule, moduleList.size());
     InitializeLogs();
-    for (auto t_module : moduleList) {
-        g_console.FWrite("[i] scanning %s\n", t_module->szModule);
-        LogModuleStart(t_module->szModule);
+    for (auto target_module : moduleList) {
+        g_console.FWrite("[i] scanning %s\n", target_module->szModule);
+        LogModuleStart(target_module->szModule);
 
-        SectionInfo* si = GetSectionInformation(t_module);
-        auto vtable_list = VTHelper::FindAll(si);
-        g_console.FWriteBold("[i] Found %d tables!\n", vtable_list.size());
+        SectionInfo* sectInfo = GetSectionInformation(target_module);
+        if (!sectInfo) {
+            g_console.WriteBold("Error with SectionInfo!\n");
+            continue;
+        }
+        auto vtable_list = VTHelper::FindAll(sectInfo);
+        g_console.FWrite("[i] Found %d tables!\n\n", vtable_list.size());
 
         for (uintptr_t vtable : vtable_list) {
-            DumpVTableInfo(vtable, si);
-            DumpInheritanceInfo(vtable, si);
+            DumpVTableInfo(vtable, sectInfo);
+            DumpInheritanceInfo(vtable, sectInfo);
         }
-        LogModuleEnd(t_module->szModule);
+        LogModuleEnd(target_module->szModule);
     }
-
+    g_console.WaitInput();
     CloseLogs();
     FreeLibraryAndExitThread(hModule, -1);
 }
