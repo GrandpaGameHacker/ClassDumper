@@ -9,8 +9,19 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 			CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
 			if (COL->signature == 1 || COL->signature == 0) {
 				auto TypeDesc = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
-				g_console.Write((char*)&TypeDesc->name);
-				return true;
+				if (!TypeDesc) {
+					return false;
+				}
+				if (!TypeDesc->pVFTable) {
+					return false;
+				}
+				if (sectionInfo->RDATA.base <= TypeDesc->pVFTable && TypeDesc->pVFTable <= sectionInfo->RDATA.end) {
+					auto test_function = reinterpret_cast<uintptr_t*>(TypeDesc->pVFTable);
+					if (sectionInfo->TEXT.base <= *test_function && *test_function <= sectionInfo->TEXT.end) {
+						return true;
+					}
+				}
+
 			}
 		}
 	}
@@ -49,7 +60,6 @@ std::vector<uintptr_t> VTHelper::FindVTables(SectionInfo* sectionInfo)
 	while (ptr < sectionInfo->RDATA.end) {
 		if (IsValid(reinterpret_cast<void*>(ptr), sectionInfo)) {
 			VTableList.push_back(ptr);
-			g_console.FWrite("%p\n", ptr);
 		}
 		ptr += sizeof(uintptr_t);
 	}
