@@ -17,6 +17,9 @@ namespace VTHelper
 }
 
 string DemangleMSVC(char* symbol);
+void StrFilter(std::string& string, const std::string& substring);
+void ApplySymbolFilters(std::string& Symbol);
+
 
 void InitializeLogs();
 void LogModuleStart(char* moduleName);

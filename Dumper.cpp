@@ -98,8 +98,28 @@ std::string DemangleMSVC(char* symbol)
 		g_console.FWriteBold("Error Code: %d", GetLastError());
 		return std::string(symbol); //Failsafe
 	}
-	return std::string(buff);
+    string buffer = string(buff);
+	return buffer;
 }
+
+void StrFilter(std::string& string, const std::string& substring)
+{
+	size_t pos = std::string::npos;
+	while ((pos = string.find(substring)) != std::string::npos)
+	{
+		string.erase(pos, substring.length());
+	}
+}
+
+void ApplySymbolFilters(std::string& Symbol)
+{
+	std::vector<std::string> filters = { "::`vftable'", "const ", "::`anonymous namespace'" };
+	for (std::string filter : filters)
+	{
+		StrFilter(Symbol, filter);
+	}
+}
+
 
 ofstream VTableLog;
 ofstream InheritanceLog;
@@ -146,31 +166,54 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
 #endif
 	string className = DemangleMSVC(&pTypeDescriptor->name);
+	auto FunctionList = VTHelper::GetListOfFunctions((void*)VTable, sectionInfo);
 	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
 	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
 	char MH = (MultipleInheritance) ? 'M' : ' ';
 	char VH = (VirtualInheritance) ? 'V' : ' ';
-	VTableLog << MH << VH << hex << VTable << "\t" << className << "\t" << endl;
+	VTableLog << MH << VH << hex << "0x" << VTable << "\t" << className << "\t" << endl;
+	int index = 0;
+	for (auto function : FunctionList) {
+		VTableLog << "\t" << dec << index;
+		VTableLog << "\t" << hex << "0x" << function << endl;
+		index++;
+	}
+	VTableLog << "\n\n";
 }
 
 void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 {
-//	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
-//	uintptr_t* meta_ptr = vftable_ptr - 1;
-//	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
-//#ifdef _WIN64
-//	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
-//	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor(sectionInfo->ModuleBase);
-//	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray(sectionInfo->ModuleBase);
-//#else
-//	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
-//	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
-//	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
-//#endif
-//	string className = DemangleMSVC(&pTypeDescriptor->name);
-//	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
-//	for (unsigned long i = 0; i < numBaseClasses; i++) {
-//		// Dump each base class for the current class
-//	}
-	// Complete dump for class
+	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
+	uintptr_t* meta_ptr = vftable_ptr - 1;
+	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
+#ifdef _WIN64
+	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
+	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor(sectionInfo->ModuleBase);
+	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray(sectionInfo->ModuleBase);
+#else
+	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
+	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
+	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
+#endif
+	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
+	for (unsigned long i = 0; i < numBaseClasses; i++) {
+#ifdef _WIN64
+		BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i, sectionInfo->ModuleBase);
+		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor(sectionInfo->ModuleBase);
+#else
+		BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
+		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
+#endif
+		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
+		ApplySymbolFilters(currentBaseClassName);
+		if (i + 1 == numBaseClasses) {
+			InheritanceLog << currentBaseClassName;
+		}
+		else
+		{
+			InheritanceLog << currentBaseClassName << "\t->\t";
+		}
+
+	}
+	InheritanceLog << endl;
 }
