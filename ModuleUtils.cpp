@@ -1,5 +1,14 @@
 #include "ModuleUtils.h"
 
+bool IsSystemModule(MODULEENTRY32* Module)
+{
+	std::string modstr = Module->szExePath;
+	if (modstr.find("\\Windows\\") != std::string::npos) {
+		return true;
+	}
+	return false;
+}
+
 void GetModuleInfo(char* ModuleName, MODULEINFO* ModuleInfo) {
 	HMODULE Module{ 0 };
 	Module = GetModuleHandle(ModuleName);
@@ -22,7 +31,7 @@ std::vector<MODULEENTRY32*> GetModuleList(HMODULE skipModule)
 		return moduleList;
 	}
 	for (;;) {
-		if (ModuleEntry->hModule != skipModule) {
+		if (ModuleEntry->hModule != skipModule && !IsSystemModule(ModuleEntry)) {
 			moduleList.push_back(ModuleEntry);
 		}
 		else {
@@ -54,19 +63,25 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 	}
 	WORD NumberOfSections = NTHeader->FileHeader.NumberOfSections;
 	IMAGE_SECTION_HEADER* Section = IMAGE_FIRST_SECTION(NTHeader);
+	bool TEXT_found = false;
+	bool RDATA_found = false;
 	for (WORD i = 0; i < NumberOfSections; i++) {
 		if (strcmp((const char*)Section[i].Name, ".text\x00\x00\x00") == 0)
 		{
 			sectionInfo->TEXT.base = Section[i].VirtualAddress + (uintptr_t)MBase;
 			sectionInfo->TEXT.size = Section[i].SizeOfRawData;
 			sectionInfo->TEXT.end = sectionInfo->TEXT.base + sectionInfo->TEXT.size - 1;
+			TEXT_found = true;
 		}
 		if (strcmp((const char*)Section[i].Name, ".rdata\x00\x00") == 0)
 		{
 			sectionInfo->RDATA.base = Section[i].VirtualAddress + (uintptr_t)MBase;
 			sectionInfo->RDATA.size = Section[i].SizeOfRawData;
 			sectionInfo->RDATA.end = sectionInfo->RDATA.base + sectionInfo->RDATA.size - 1;
+			RDATA_found = true;
 		}
+		if (TEXT_found && RDATA_found)
+			break;
 	}
 	if (sectionInfo->TEXT.base && sectionInfo->RDATA.base) {
 		return sectionInfo;

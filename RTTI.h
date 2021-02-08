@@ -84,10 +84,11 @@ struct BaseClassDescriptor
     PMD where; // pointer to member displacement info
     unsigned long attributes; // flags, generally unused
 };
-
+#pragma warning(disable : 4200)
 struct BaseClassArray {
     BaseClassDescriptor* arrayOfBaseClassDescriptors[]; // describes base classes for the complete class
 };
+#pragma warning(default: 4200)
 
 struct ClassHierarchyDescriptor
 {

@@ -46,6 +46,9 @@
     <ClInclude Include="Dumper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Theory.txt">

@@ -7,7 +7,7 @@ ClassHierarchyDescriptor* CompleteObjectLocator::GetClassDescriptor(uintptr_t Mo
 {
 	return reinterpret_cast<ClassHierarchyDescriptor*>(ModuleBase + ClassDescriptorOffset);
 }
-#endif
+
 
 BaseClassArray* ClassHierarchyDescriptor::GetBaseClassArray(uintptr_t ModuleBase)
 {
@@ -23,3 +23,4 @@ TypeDescriptor* BaseClassDescriptor::GetTypeDescriptor(uintptr_t ModuleBase)
 {
 	return reinterpret_cast<TypeDescriptor*>(ModuleBase + TypeDescriptorOffset);
 }
+#endif
