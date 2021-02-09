@@ -66,14 +66,15 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 	bool TEXT_found = false;
 	bool RDATA_found = false;
 	for (WORD i = 0; i < NumberOfSections; i++) {
-		if (strcmp((const char*)Section[i].Name, ".text\x00\x00\x00") == 0)
+		if (strcmp((const char*)Section[i].Name, ".text") == 0)
 		{
 			sectionInfo->TEXT.base = Section[i].VirtualAddress + (uintptr_t)MBase;
 			sectionInfo->TEXT.size = Section[i].SizeOfRawData;
 			sectionInfo->TEXT.end = sectionInfo->TEXT.base + sectionInfo->TEXT.size - 1;
 			TEXT_found = true;
+			continue;
 		}
-		if (strcmp((const char*)Section[i].Name, ".rdata\x00\x00") == 0)
+		if (strcmp((const char*)Section[i].Name, ".rdata") == 0)
 		{
 			sectionInfo->RDATA.base = Section[i].VirtualAddress + (uintptr_t)MBase;
 			sectionInfo->RDATA.size = Section[i].SizeOfRawData;

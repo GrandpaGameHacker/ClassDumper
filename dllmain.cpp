@@ -35,13 +35,15 @@ void DllThread(HMODULE hModule)
     InitializeLogs();
     for (auto target_module : moduleList) {
         g_console.FWrite("[i] scanning %s\n", target_module->szModule);
-        LogModuleStart(target_module->szModule);
+
 
         SectionInfo* sectInfo = GetSectionInformation(target_module);
         if (!sectInfo) {
             g_console.WriteBold("Error with SectionInfo!\n");
             continue;
         }
+
+        LogModuleStart(target_module->szModule);
         auto vtable_list = VTHelper::FindAll(sectInfo);
         g_console.FWrite("[i] Found %d tables!\n\n", vtable_list.size());
 

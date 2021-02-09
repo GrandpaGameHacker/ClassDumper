@@ -1,5 +1,6 @@
 #include "Dumper.h"
 #include "Path.h"
+
 bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 {
 	static uintptr_t type_info_vtable_cache = 0;
@@ -14,7 +15,11 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 #else
 				auto TypeDesc = COL->pTypeDescriptor;
 #endif
+				void* TypeDescPtrCheck = (void*)TypeDesc;
 				if (!TypeDesc) {
+					return false;
+				}
+				if (IsPtrReadable(TypeDescPtrCheck) != 0) {
 					return false;
 				}
 				if (!TypeDesc->pVFTable) {
