@@ -55,10 +55,12 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 	sectionInfo->ModuleBase = reinterpret_cast<uintptr_t>(MBase);
 	IMAGE_DOS_HEADER* DosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(MBase);
 	if (!DosHeader || DosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+		delete sectionInfo;
 		return nullptr;
 	}
 	IMAGE_NT_HEADERS* NTHeader = reinterpret_cast<IMAGE_NT_HEADERS*>(MBase + DosHeader->e_lfanew);
 	if (!NTHeader || NTHeader->Signature != IMAGE_NT_SIGNATURE){
+		delete sectionInfo;
 		return nullptr;
 	}
 	WORD NumberOfSections = NTHeader->FileHeader.NumberOfSections;

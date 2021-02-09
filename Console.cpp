@@ -145,5 +145,5 @@ void Console::FWriteBold(const char* format, ...)
 void Console::WaitInput()
 {
 	std::cout << "Press anything to continue..." << std::endl;
-	getchar();
+	int c = getchar(); // VS Be like "wahh you never used the return value" piss off vs
 }

@@ -14,7 +14,7 @@ class Console
 	CONSOLE_SCREEN_BUFFER_INFO m_csbi;
 public:
 	Console();
-	Console(const std::string& title);
+	explicit Console(const std::string& title);
 	~Console();
 
 	void Init();

@@ -109,7 +109,7 @@ std::string DemangleMSVC(char* symbol)
 
 void StrFilter(std::string& string, const std::string& substring)
 {
-	size_t pos = std::string::npos;
+	size_t pos;
 	while ((pos = string.find(substring)) != std::string::npos)
 	{
 		string.erase(pos, substring.length());
