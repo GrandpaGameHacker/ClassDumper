@@ -7,6 +7,8 @@ ClassDumper is a tool to quickly retrieve information about  virtual classes in 
 You'll need to inject it into your target process
 Output will be on the current users desktop (vtable.txt, inheritance.txt)
 
+# About ClassDumper
+
 While programs like IDA, Binary Ninja and Ghidra are good for this,  
 I think its handy to have this information really fast rather than  
 waiting for the binary to parse in these disassemblers.  
