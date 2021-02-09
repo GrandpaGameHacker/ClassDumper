@@ -201,7 +201,19 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
 #endif
 	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
-	for (unsigned long i = 0; i < numBaseClasses; i++) {
+	string className = DemangleMSVC(&pTypeDescriptor->name);
+	ApplySymbolFilters(className);
+	if (numBaseClasses > 1)\
+	{
+		InheritanceLog << className << ":" << endl;
+	}
+	else
+	{
+		InheritanceLog << className << " (No Base Classes)" << endl << endl;
+		return;
+	}
+	
+	for (unsigned long i = 1; i < numBaseClasses; i++) {
 #ifdef _WIN64
 		BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i, sectionInfo->ModuleBase);
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor(sectionInfo->ModuleBase);
@@ -209,16 +221,17 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 		BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
 #endif
+
+		ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
+		ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
+		ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
+
 		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
 		ApplySymbolFilters(currentBaseClassName);
-		if (i + 1 == numBaseClasses) {
-			InheritanceLog << currentBaseClassName;
-		}
-		else
-		{
-			InheritanceLog << currentBaseClassName << "\t->\t";
-		}
-
+		InheritanceLog << hex << mdisp << " ";
+		InheritanceLog << dec << pdisp << " ";
+		InheritanceLog << hex << vdisp << "\t";
+		InheritanceLog << currentBaseClassName << endl;
 	}
 	InheritanceLog << endl;
 }

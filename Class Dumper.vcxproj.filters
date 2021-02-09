@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="Readme">
+      <UniqueIdentifier>{542e9b89-c737-4203-9144-a91ee3a07761}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -54,8 +57,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md">
+      <Filter>Readme</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <Text Include="Theory.txt">
-      <Filter>Source Files</Filter>
+      <Filter>Readme</Filter>
     </Text>
   </ItemGroup>
 </Project>

@@ -18,9 +18,9 @@ struct TypeDescriptor
 
 struct PMD
 {
-    ptrdiff_t mdisp; // member displacement
-    ptrdiff_t pdisp; // vbtable displacement
-    ptrdiff_t vdisp; // displacement inside vbtable
+    int mdisp; // member displacement
+    int pdisp; // vbtable displacement
+    int vdisp; // displacement inside vbtable
 };
 
 struct BaseClassDescriptor
@@ -72,9 +72,9 @@ struct TypeDescriptor
 
 struct PMD
 {
-    ptrdiff_t mdisp; // member displacement
-    ptrdiff_t pdisp; // vbtable displacement
-    ptrdiff_t vdisp; // displacement inside vbtable
+    int mdisp; // member displacement
+    int pdisp; // vbtable displacement
+    int vdisp; // displacement inside vbtable
 };
 
 struct BaseClassDescriptor
