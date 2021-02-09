@@ -1,6 +1,11 @@
 # ClassDumper
-A Remake of my original RTTIDumper tool  
-ClassDumper is a tool to quickly retrieve information about  virtual classes in games or other software.  
+A Remake of my original RTTIDumper tool
+ClassDumper is a tool to quickly retrieve information about  virtual classes in games or other software.
+
+# Basic Usage
+
+You'll need to inject it into your target process
+Output will be on the current users desktop (vtable.txt, inheritance.txt)
 
 While programs like IDA, Binary Ninja and Ghidra are good for this,  
 I think its handy to have this information really fast rather than  
