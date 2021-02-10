@@ -39,7 +39,7 @@ std::vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionI
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
 	uintptr_t function_ptr = *vftable_ptr;
 	while (sectionInfo->TEXT.base <= function_ptr && function_ptr <= sectionInfo->TEXT.end) {
-		functionList.push_back(*vftable_ptr);
+		functionList.push_back(function_ptr);
 		vftable_ptr++;
 		function_ptr = *vftable_ptr;
 	}
@@ -107,9 +107,13 @@ void ApplySymbolFilters(std::string& Symbol)
 
 ofstream VTableLog;
 ofstream InheritanceLog;
+const size_t bufsize = 1024 * 1024;
+char buf1[bufsize];
+char buf2[bufsize];
 
 void InitializeLogs()
 {
+
 	wstring vtable_path = GetDesktopPath();
 	vtable_path.append(L"\\vtable.txt");
 	VTableLog.open(vtable_path);
@@ -117,18 +121,21 @@ void InitializeLogs()
 	wstring inheritance_path = GetDesktopPath();
 	inheritance_path.append(L"\\inheritance.txt");
 	InheritanceLog.open(inheritance_path);
+	
+	InheritanceLog.rdbuf()->pubsetbuf(buf1, bufsize);
+	InheritanceLog.rdbuf()->pubsetbuf(buf2, bufsize);
 }
 
 void LogModuleStart(char* moduleName)
 {
-	VTableLog << "<" << moduleName << '>' << endl;
-	InheritanceLog << "<" << moduleName << '>' << endl;
+	VTableLog << "<" << moduleName << '>' << "\n";
+	InheritanceLog << "<" << moduleName << '>' << "\n";
 }
 
 void LogModuleEnd(char* moduleName)
 {
-	VTableLog << "< end " << moduleName << '>' << endl << endl;
-	InheritanceLog << "< end " << moduleName << '>' << endl << endl;
+	VTableLog << "< end " << moduleName << '>' << "\n\n";
+	InheritanceLog << "< end " << moduleName << '>' << "\n\n";
 }
 
 void CloseLogs()
@@ -155,11 +162,11 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
 	char MH = (MultipleInheritance) ? 'M' : ' ';
 	char VH = (VirtualInheritance) ? 'V' : ' ';
-	VTableLog << MH << VH << hex << "0x" << VTable << "\t" << className << "\t" << endl;
+	VTableLog << MH << VH << hex << "0x" << VTable << "\t" << className << "\t" << "\n";
 	int index = 0;
 	for (auto function : FunctionList) {
 		VTableLog << "\t" << dec << index;
-		VTableLog << "\t" << hex << "0x" << function << endl;
+		VTableLog << "\t" << hex << "0x" << function << "\n";
 		index++;
 	}
 	VTableLog << "\n\n";
@@ -184,11 +191,11 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	ApplySymbolFilters(className);
 	if (numBaseClasses > 1)\
 	{
-		InheritanceLog << className << ":" << endl;
+		InheritanceLog << className << ":" << "\n";
 	}
 	else
 	{
-		InheritanceLog << className << " (No Base Classes)" << endl << endl;
+		InheritanceLog << className << " (No Base Classes)" << "\n\n";
 		return;
 	}
 	
@@ -210,8 +217,8 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 			InheritanceLog << hex << "0x" << mdisp;
 			InheritanceLog << "\t";
 		}
-		// else, I dont know how to parse the vbtable;
-		InheritanceLog << currentBaseClassName << endl;
+		// else, I dont know how to parse the vbtable yet;
+		InheritanceLog << currentBaseClassName << "\n";
 	}
-	InheritanceLog << endl;
+	InheritanceLog << "\n";
 }

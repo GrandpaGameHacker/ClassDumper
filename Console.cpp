@@ -114,7 +114,7 @@ void Console::ClearScreen()
 
 void Console::Write(const std::string& str)
 {
-	std::cout << str << std::endl;
+	std::cout << str << "\n";
 }
 
 void Console::FWrite(const char* format, ...)
@@ -144,6 +144,6 @@ void Console::FWriteBold(const char* format, ...)
 
 void Console::WaitInput()
 {
-	std::cout << "Press anything to continue..." << std::endl;
+	std::cout << "Press anything to continue...\n";
 	int c = getchar(); // VS Be like "wahh you never used the return value" piss off vs
 }
