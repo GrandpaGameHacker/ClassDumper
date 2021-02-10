@@ -33,27 +33,15 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 	return false;
 }
 
-size_t VTHelper::GetNumberOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
-{
-	size_t numberOfFunctions = 0;
-	uintptr_t* vtable = reinterpret_cast<uintptr_t*>(VTable_start);
-	uintptr_t functionptr = *vtable;
-	while (sectionInfo->TEXT.base <= functionptr && functionptr <= sectionInfo->TEXT.end) {
-		numberOfFunctions++;
-		vtable++;
-		functionptr = *vtable;
-	}
-	return numberOfFunctions;
-}
-
 std::vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
 {
 	std::vector<uintptr_t> functionList;
-	size_t nFunctions = GetNumberOfFunctions(VTable_start, sectionInfo);
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
-	for (size_t i = 0; i < nFunctions; i++) {
+	uintptr_t function_ptr = *vftable_ptr;
+	while (sectionInfo->TEXT.base <= function_ptr && function_ptr <= sectionInfo->TEXT.end) {
 		functionList.push_back(*vftable_ptr);
 		vftable_ptr++;
+		function_ptr = *vftable_ptr;
 	}
 	return functionList;
 }

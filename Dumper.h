@@ -13,7 +13,6 @@ extern Console g_console; // for debugging
 namespace VTHelper
 {
 	bool IsValid(void* VTable_start, SectionInfo* sectionInfo);
-	size_t GetNumberOfFunctions(void* VTable_start, SectionInfo* sectionInfo);
 	vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo);
 	vector<uintptr_t> FindAll(SectionInfo* sectionInfo);
 }
