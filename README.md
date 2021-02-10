@@ -50,11 +50,7 @@ and that the pointer behind the vtable is indeed a CompleteObjectLocator inside 
 
 To check if the CompleteObjectLocator is valid all we need to do is test:
   - If the CompleteObjectLocator signature is either a 0 or a 1 (0 for 32bit, 1 for 64bit?)
-  - TypeDescriptor points to somewhere in .rdata
-  - TypeDescriptor->pVTable points to somewhere in .rdata
-  - TypeDescriptor->pVTable has at least one valid function pointer (points to somewhere in .text)
-
-Once we find our first valid CompleteObjectLocator, we can cache the TypeDescriptor->pVTable pointer  
-for a compare because ALL TypeDescriptors from the same executable will have the same pVTable  
+  - pTypeDescriptor is a valid pointer
+  - That TypeDescriptor.name starts with ".?AV"
 
 After finding all vtables its just a game of parsing the various RTTI structures and vtables and dumping all the info.

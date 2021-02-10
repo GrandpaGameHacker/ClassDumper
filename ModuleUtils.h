@@ -8,7 +8,6 @@ struct Section {
 };
 
 struct SectionInfo {
-	uintptr_t ModuleBase;
 	Section TEXT;
 	Section RDATA;
 };

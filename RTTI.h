@@ -9,6 +9,7 @@
 //struct TypeDescriptor;
 
 #ifdef _WIN64
+extern uintptr_t ModuleBase;
 struct TypeDescriptor
 {
     uintptr_t pVFTable; // type_info vftable ptr
@@ -30,13 +31,13 @@ struct BaseClassDescriptor
     PMD where; // pointer to member displacement info
     unsigned long attributes; // flags, generally unused
 
-    TypeDescriptor* GetTypeDescriptor(uintptr_t ModuleBase);
+    TypeDescriptor* GetTypeDescriptor();
 };
 
 #pragma warning(disable : 4200)
 struct BaseClassArray {
     unsigned long arrayOfBaseClassDescriptorOffsets[]; // describes base classes for the complete class
-    BaseClassDescriptor* GetBaseClassDescriptor(unsigned long index, uintptr_t ModuleBase);
+    BaseClassDescriptor* GetBaseClassDescriptor(unsigned long index);
 };
 #pragma warning (default : 4200)
 
@@ -47,7 +48,7 @@ struct ClassHierarchyDescriptor
     unsigned long numBaseClasses;// number of classes in pBaseClassArray
     unsigned long BaseClassArrayOffset;
 
-    BaseClassArray* GetBaseClassArray(uintptr_t ModuleBase);
+    BaseClassArray* GetBaseClassArray();
 };
 
 struct CompleteObjectLocator
@@ -57,9 +58,10 @@ struct CompleteObjectLocator
     unsigned long cdOffset; // constructor displacement offset
     unsigned long TypeDescriptorOffset; //  TypeDescriptor of the complete class
     unsigned long ClassDescriptorOffset; // describes inheritance hierarchy
+    unsigned long CompleteObjectLocatorOffset; // Used to get the base address of module
 
-    TypeDescriptor* GetTypeDescriptor(uintptr_t ModuleBase);
-    ClassHierarchyDescriptor* GetClassDescriptor(uintptr_t ModuleBase);
+    TypeDescriptor* GetTypeDescriptor();
+    ClassHierarchyDescriptor* GetClassDescriptor();
 };
 #else
 

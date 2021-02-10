@@ -3,7 +3,6 @@
 
 bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 {
-	static uintptr_t type_info_vtable_cache = 0;
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
 	uintptr_t* meta_ptr = vftable_ptr - 1;
 	if (sectionInfo->RDATA.base <= *meta_ptr && *meta_ptr <= sectionInfo->RDATA.end) {
@@ -11,7 +10,7 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 			CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
 			if (COL->signature == 1 || COL->signature == 0) {
 #ifdef _WIN64
-				auto TypeDesc = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
+				auto TypeDesc = COL->GetTypeDescriptor();
 #else
 				auto TypeDesc = COL->pTypeDescriptor;
 #endif
@@ -22,20 +21,12 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 				if (IsPtrReadable(TypeDescPtrCheck) != 0) {
 					return false;
 				}
-				if (!TypeDesc->pVFTable) {
-					return false;
-				}
-				if (type_info_vtable_cache && TypeDesc->pVFTable == type_info_vtable_cache) {
+				// Test if string is ".?AV" real quick
+				// I do this because using strcmp is probably slower.
+				unsigned long* nameTest = (unsigned long*)&TypeDesc->name;
+				if (*nameTest == 0x56413F2E) {
 					return true;
 				}
-				if (sectionInfo->RDATA.base <= TypeDesc->pVFTable && TypeDesc->pVFTable <= sectionInfo->RDATA.end) {
-					auto test_function = reinterpret_cast<uintptr_t*>(TypeDesc->pVFTable);
-					if (sectionInfo->TEXT.base <= *test_function && *test_function <= sectionInfo->TEXT.end){
-						type_info_vtable_cache = TypeDesc->pVFTable;
-						return true;
-					}
-				}
-
 			}
 		}
 	}
@@ -164,8 +155,8 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	uintptr_t* meta_ptr = vftable_ptr - 1;
 	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
 #ifdef _WIN64
-	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
-	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor(sectionInfo->ModuleBase);
+	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor();
+	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor();
 #else
 	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
@@ -192,9 +183,9 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	uintptr_t* meta_ptr = vftable_ptr - 1;
 	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
 #ifdef _WIN64
-	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor(sectionInfo->ModuleBase);
-	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor(sectionInfo->ModuleBase);
-	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray(sectionInfo->ModuleBase);
+	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor();
+	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor();
+	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray();
 #else
 	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
@@ -215,22 +206,23 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	
 	for (unsigned long i = 1; i < numBaseClasses; i++) {
 #ifdef _WIN64
-		BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i, sectionInfo->ModuleBase);
-		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor(sectionInfo->ModuleBase);
+		BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i);
+		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
 #else
 		BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
 #endif
-
 		ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
 		ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
 		ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
 
 		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
 		ApplySymbolFilters(currentBaseClassName);
-		InheritanceLog << hex << mdisp << " ";
-		InheritanceLog << dec << pdisp << " ";
-		InheritanceLog << hex << vdisp << "\t";
+		if (pdisp == -1) { // if pdisp is -1, the vtable offset for base class is actually mdisp
+			InheritanceLog << hex << "0x" << mdisp;
+			InheritanceLog << "\t";
+		}
+		// else, I dont know how to parse the vbtable;
 		InheritanceLog << currentBaseClassName << endl;
 	}
 	InheritanceLog << endl;

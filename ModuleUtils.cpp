@@ -52,7 +52,6 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 	SectionInfo* sectionInfo = new SectionInfo;
 	memset((void*)sectionInfo, 0, sizeof(SectionInfo));
 	BYTE* MBase = Module->modBaseAddr;
-	sectionInfo->ModuleBase = reinterpret_cast<uintptr_t>(MBase);
 	IMAGE_DOS_HEADER* DosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(MBase);
 	if (!DosHeader || DosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
 		delete sectionInfo;
