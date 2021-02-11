@@ -3,13 +3,13 @@
 #include "Memory.h"
 #include "stdheaders.h"
 #include "RTTI.h"
-
-
+const unsigned int TYPEDESCRIPTOR_SIGNITURE = 0x56413F2E;
 
 using namespace std;
 extern ofstream VTableLog;
 extern ofstream InheritanceLog;
-extern Console g_console; // for debugging
+extern Console g_console;
+
 namespace VTHelper
 {
 	bool IsValid(void* VTable_start, SectionInfo* sectionInfo);
@@ -18,8 +18,8 @@ namespace VTHelper
 }
 
 string DemangleMSVC(char* symbol);
-void StrFilter(std::string& string, const std::string& substring);
-void ApplySymbolFilters(std::string& Symbol);
+void StringFilter(string& string, const std::string& substring);
+void FilterSymbol(string& Symbol);
 
 
 void InitializeLogs();

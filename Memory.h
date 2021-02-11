@@ -1,6 +1,6 @@
 #pragma once
 #include <Windows.h>
-static bool IsPtrReadable(void* p)
+static bool IsBadReadPointer(void* p)
 {
     MEMORY_BASIC_INFORMATION mbi = { 0 };
     if (VirtualQuery(p, &mbi, sizeof(mbi)))

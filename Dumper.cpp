@@ -8,23 +8,19 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 	if (sectionInfo->RDATA.base <= *meta_ptr && *meta_ptr <= sectionInfo->RDATA.end) {
 		if (sectionInfo->TEXT.base <= *vftable_ptr && *vftable_ptr <= sectionInfo->TEXT.end) {
 			CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
-			if (COL->signature == 1 || COL->signature == 0) {
 #ifdef _WIN64
+			if (COL->signature == 1) {
 				auto TypeDesc = COL->GetTypeDescriptor();
 #else
+			if (COL->signature == 0) {
 				auto TypeDesc = COL->pTypeDescriptor;
 #endif
-				void* TypeDescPtrCheck = (void*)TypeDesc;
-				if (!TypeDesc) {
-					return false;
-				}
-				if (IsPtrReadable(TypeDescPtrCheck) != 0) {
+				if (IsBadReadPointer(reinterpret_cast<void*>(TypeDesc)) != 0) {
 					return false;
 				}
 				// Test if string is ".?AV" real quick
 				// I do this because using strcmp is probably slower.
-				unsigned long* nameTest = (unsigned long*)&TypeDesc->name;
-				if (*nameTest == 0x56413F2E) {
+				if (*reinterpret_cast<unsigned long*>(&TypeDesc->name) == TYPEDESCRIPTOR_SIGNITURE) {
 					return true;
 				}
 			}
@@ -33,9 +29,9 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 	return false;
 }
 
-std::vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
+vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
 {
-	std::vector<uintptr_t> functionList;
+	vector<uintptr_t> functionList;
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
 	uintptr_t function_ptr = *vftable_ptr;
 	while (sectionInfo->TEXT.base <= function_ptr && function_ptr <= sectionInfo->TEXT.end) {
@@ -46,10 +42,10 @@ std::vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionI
 	return functionList;
 }
 
-std::vector<uintptr_t> VTHelper::FindAll(SectionInfo* sectionInfo)
+vector<uintptr_t> VTHelper::FindAll(SectionInfo* sectionInfo)
 {
-	std::vector<uintptr_t> VTableList;
-	uintptr_t ptr = sectionInfo->RDATA.base;
+	vector<uintptr_t> VTableList;
+	uintptr_t ptr = sectionInfo->RDATA.base + sizeof(uintptr_t);
 	while (ptr < sectionInfo->RDATA.end) {
 		if (IsValid(reinterpret_cast<void*>(ptr), sectionInfo)) {
 			VTableList.push_back(ptr);
@@ -59,48 +55,52 @@ std::vector<uintptr_t> VTHelper::FindAll(SectionInfo* sectionInfo)
 	return VTableList;
 }
 
-std::string DemangleMSVC(char* symbol)
+const string VFTableSymbolStart = "??_7";
+const string VFTableSymbolEnd = "6B@";
+static char buff[0x1000];
+
+string DemangleMSVC(char* symbol)
 {
-	std::string VFTableSymbolStart = "??_7";
-	std::string VFTableSymbolEnd = "6B@";
-	char buff[0x1000] = { 0 };
 	memset(buff, 0, 0x1000);
 	char* pSymbol = symbol;
 	if (*(char*)(symbol + 4) == '?') pSymbol = symbol + 1;
 	else if (*(char*)symbol == '.') pSymbol = symbol + 4;
 	else if (*(char*)symbol == '?') pSymbol = symbol + 2;
-
 	else
 	{
 		g_console.WriteBold("invalid msvc mangled name");
 	}
-	std::string ModifiedSymbol = std::string(pSymbol);
+	string ModifiedSymbol = pSymbol;
 	ModifiedSymbol.insert(0, VFTableSymbolStart);
 	ModifiedSymbol.insert(ModifiedSymbol.size(), VFTableSymbolEnd);
 	if (!((UnDecorateSymbolName(ModifiedSymbol.c_str(), buff, 0x1000, 0)) != 0))
 	{
 		g_console.FWriteBold("Error Code: %d", GetLastError());
-		return std::string(symbol); //Failsafe
+		return string(symbol); //Failsafe
 	}
-    string buffer = string(buff);
-	return buffer;
+	return string(buff);
 }
 
-void StrFilter(std::string& string, const std::string& substring)
+void StringFilter(string& string, const std::string& substring)
 {
 	size_t pos;
-	while ((pos = string.find(substring)) != std::string::npos)
+	while ((pos = string.find(substring)) != string::npos)
 	{
 		string.erase(pos, substring.length());
 	}
 }
 
-void ApplySymbolFilters(std::string& Symbol)
+void FilterSymbol(string& Symbol)
 {
-	std::vector<std::string> filters = { "::`vftable'", "const ", "::`anonymous namespace'" };
-	for (std::string filter : filters)
+	vector<string> filters = 
 	{
-		StrFilter(Symbol, filter);
+		"::`vftable'",
+		"const ",
+		"::`anonymous namespace'"
+	};
+	for (string filter : filters)
+	{
+		StringFilter(Symbol, filter);
 	}
 }
 
@@ -165,8 +165,7 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	VTableLog << MH << VH << hex << "0x" << VTable << "\t" << className << "\t" << "\n";
 	int index = 0;
 	for (auto function : FunctionList) {
-		VTableLog << "\t" << dec << index;
-		VTableLog << "\t" << hex << "0x" << function << "\n";
+		VTableLog << "\t" << dec << index << "\t" << hex << "0x" << function << "\n";
 		index++;
 	}
 	VTableLog << "\n\n";
@@ -188,7 +187,7 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 #endif
 	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
 	string className = DemangleMSVC(&pTypeDescriptor->name);
-	ApplySymbolFilters(className);
+	FilterSymbol(className);
 	if (numBaseClasses > 1)\
 	{
 		InheritanceLog << className << ":" << "\n";
@@ -212,10 +211,9 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 		ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
 
 		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
-		ApplySymbolFilters(currentBaseClassName);
+		FilterSymbol(currentBaseClassName);
 		if (pdisp == -1) { // if pdisp is -1, the vtable offset for base class is actually mdisp
-			InheritanceLog << hex << "0x" << mdisp;
-			InheritanceLog << "\t";
+			InheritanceLog << hex << "0x" << mdisp << "\t";
 		}
 		// else, I dont know how to parse the vbtable yet;
 		InheritanceLog << currentBaseClassName << "\n";
