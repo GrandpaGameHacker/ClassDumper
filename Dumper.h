@@ -4,6 +4,8 @@
 #include "stdheaders.h"
 #include "RTTI.h"
 const unsigned int TYPEDESCRIPTOR_SIGNITURE = 0x56413F2E;
+const BYTE RET_INSTR = 0xC3;
+const BYTE RET_INT_INSTR = 0xC2;
 
 using namespace std;
 extern ofstream VTableLog;
