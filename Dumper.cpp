@@ -162,25 +162,25 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
 	char MH = (MultipleInheritance) ? 'M' : ' ';
 	char VH = (VirtualInheritance) ? 'V' : ' ';
-	VTableLog << MH << VH << hex << "0x" << VTable << "\t" << className << "\t" << "\n";
+	VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << className << "\t" << "\n";
 	int index = 0;
 	if (!FunctionList.empty())
 	{
-		VTableLog << "\t Virtual Functions:\n";
+		VTableLog << "\tVirtual Functions:\n";
 		// Function Classification (Similar to IDA naming conventions)
 		for (auto function : FunctionList) {
-			VTableLog << "\t" << dec << index << "\t" << hex << "0x" << function;
+			VTableLog << "\t" << dec << index << "\t" << hex << "0x" << function << "\t+" << GetRVA(function, sectionInfo);
 			BYTE* fnByte = (BYTE*) function;
 			if (fnByte[0] == RET_INSTR) {
-				VTableLog << "\tnullsub_" << hex << function << "\n";
+				VTableLog << "\t\tnullsub_" << hex << function << "\n";
 			}
 			else if(fnByte[0] == RET_INT_INSTR){
 				WORD ret_integer = *(WORD*)&fnByte[1];
-				VTableLog << "\tret" << ret_integer << "_" << hex << function << "\n";
+				VTableLog << "\t\tret" << ret_integer << "_" << hex << function << "\n";
 			}
 			else
 			{
-				VTableLog << "\tsub_" << hex << function << "\n";
+				VTableLog << "\t\tsub_" << hex << function << "\n";
 			}
 			index++;
 		}
