@@ -104,6 +104,31 @@ void FilterSymbol(string& Symbol)
 	}
 }
 
+bool SymbolComparator(uintptr_t v1, uintptr_t v2)
+{
+	v1 = v1 - sizeof(uintptr_t); v2 = v2 - sizeof(uintptr_t);
+	uintptr_t* v1p = (uintptr_t*) v1; uintptr_t* v2p = (uintptr_t*) v2;
+	CompleteObjectLocator* COL1 = reinterpret_cast<CompleteObjectLocator*>(*v1p);
+	CompleteObjectLocator* COL2 = reinterpret_cast<CompleteObjectLocator*>(*v2p);
+#ifdef _WIN64
+	TypeDescriptor* TD1 = COL1->GetTypeDescriptor();
+	TypeDescriptor* TD2 = COL2->GetTypeDescriptor();
+#else
+	TypeDescriptor* TD1 = COL1->pTypeDescriptor;
+	TypeDescriptor* TD2 = COL2->pTypeDescriptor;
+#endif
+
+	string Symbol1 = DemangleMSVC(&TD1->name);
+	string Symbol2 = DemangleMSVC(&TD2->name);
+	
+	return (Symbol1 < Symbol2);
+}
+
+void SortSymbols(vector<uintptr_t>& vtable_list)
+{
+	sort(vtable_list.begin(), vtable_list.end(), SymbolComparator);
+}
+
 
 ofstream VTableLog;
 ofstream InheritanceLog;
@@ -167,7 +192,7 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	if (!FunctionList.empty())
 	{
 		VTableLog << "\tVirtual Functions:\n";
-		// Function Classification (Similar to IDA naming conventions)
+		// Function Classification (Similar to IDA naming conventions) (disgusting code dont read)
 		for (auto function : FunctionList) {
 			VTableLog << "\t" << dec << index << "\t" << hex << "0x" << function << "\t+" << GetRVA(function, sectionInfo);
 			BYTE* fnByte = (BYTE*) function;

@@ -46,6 +46,7 @@ void DllThread(HMODULE hModule)
         LogModuleStart(target_module->szModule);
         auto vtable_list = VTHelper::FindAll(sectInfo);
         g_console.FWrite("[i] Found %d tables!\n\n", vtable_list.size());
+        SortSymbols(vtable_list);
 
         for (uintptr_t vtable : vtable_list) {
             DumpVTableInfo(vtable, sectInfo);
