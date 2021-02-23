@@ -159,9 +159,6 @@ void InitializeLogs(string folderName)
 
 	VTableLog.rdbuf()->pubsetbuf(buf1, bufsize);
 	InheritanceLog.rdbuf()->pubsetbuf(buf2, bufsize);
-
-	cout << vtable_path << "\n";
-	cout << inheritance_path << "\n";
 }
 
 void LogModuleStart(char* moduleName)
