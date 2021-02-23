@@ -1,5 +1,5 @@
 #include "dllmain.h"
-#include <chrono>
+
 
 Console g_console = Console(CONSOLE_TITLE);
 
@@ -34,12 +34,12 @@ void DllThread(HMODULE hModule)
 	g_console.FWrite("[i] %s has %zu non-system modules\n", moduleList[0]->szModule, moduleList.size());
 
 	string moduleName = moduleList[0]->szModule;
-	moduleName = moduleName.substr(0, moduleName.length() - 4);
-	InitializeLogs(moduleName);
+	moduleName = moduleName.substr(0, moduleName.length() - 4); // remove the .exe from the name
+	InitializeLogs(moduleName); // Create the log directories and file streams
 	for (auto target_module : moduleList) {
 		g_console.FWrite("[i] scanning %s\n", target_module->szModule);
 
-
+		// Read PE file and get section headers
 		SectionInfo* sectInfo = GetSectionInformation(target_module);
 		if (!sectInfo) {
 			g_console.WriteBold("Error with SectionInfo!\n");
@@ -47,10 +47,12 @@ void DllThread(HMODULE hModule)
 		}
 
 		LogModuleStart(target_module->szModule);
-		auto vtable_list = VTHelper::FindAll(sectInfo);
+		auto vtable_list = FindAllVTables(sectInfo); // Scan for vtables
 		g_console.FWrite("[i] Found %d tables!\n\n", vtable_list.size());
+		// Sort vtables alphabetically by class name
 		SortSymbols(vtable_list);
 
+		//Dump all the info for this module
 		for (uintptr_t vtable : vtable_list) {
 			DumpVTableInfo(vtable, sectInfo);
 			DumpInheritanceInfo(vtable, sectInfo);

@@ -1,8 +1,7 @@
 #include "Dumper.h"
-#include "Path.h"
-#include "StringConversions.h"
 
-bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
+
+bool IsValid(void* VTable_start, SectionInfo* sectionInfo)
 {
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
 	uintptr_t* meta_ptr = vftable_ptr - 1;
@@ -20,7 +19,6 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 					return false;
 				}
 				// Test if string is ".?AV" real quick
-				// I do this because using strcmp is probably slower.
 				if (*reinterpret_cast<unsigned long*>(&TypeDesc->name) == TYPEDESCRIPTOR_SIGNITURE) {
 					return true;
 				}
@@ -30,7 +28,7 @@ bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 	return false;
 }
 
-vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
+vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
 {
 	vector<uintptr_t> functionList;
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
@@ -43,7 +41,7 @@ vector<uintptr_t> VTHelper::GetListOfFunctions(void* VTable_start, SectionInfo* 
 	return functionList;
 }
 
-vector<uintptr_t> VTHelper::FindAll(SectionInfo* sectionInfo)
+vector<uintptr_t> FindAllVTables(SectionInfo* sectionInfo)
 {
 	vector<uintptr_t> VTableList;
 	uintptr_t ptr = sectionInfo->RDATA.base + sizeof(uintptr_t);
@@ -192,11 +190,17 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
 #endif
 	string className = DemangleMSVC(&pTypeDescriptor->name);
-	auto FunctionList = VTHelper::GetListOfFunctions((void*)VTable, sectionInfo);
+	auto FunctionList = GetListOfFunctions((void*)VTable, sectionInfo);
 	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
 	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
 	char MH = (MultipleInheritance) ? 'M' : ' ';
 	char VH = (VirtualInheritance) ? 'V' : ' ';
+	/*
+	if(MultipleInheritance)
+	{
+		CallMultipleInheritanceHandler(VTable);
+	}
+	*/
 	VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << className << "\t" << "\n";
 	int index = 0;
 	if (!FunctionList.empty())
@@ -237,6 +241,13 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
 	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
 #endif
+	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
+	/*
+	if(MultipleInheritance)
+	{
+		CallMultipleInheritanceHandler2(VTable);
+	}
+	*/
 	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
 	string className = DemangleMSVC(&pTypeDescriptor->name);
 	FilterSymbol(className);

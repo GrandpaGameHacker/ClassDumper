@@ -1,8 +1,11 @@
 #pragma once
+#include "stdheaders.h"
 #include <fstream>
 #include "Memory.h"
-#include "stdheaders.h"
 #include "RTTI.h"
+#include "Path.h"
+#include "StringConversions.h"
+
 const unsigned int TYPEDESCRIPTOR_SIGNITURE = 0x56413F2E;
 const BYTE RET_INSTR = 0xC3;
 const BYTE RET_INT_INSTR = 0xC2;
@@ -12,12 +15,9 @@ extern ofstream VTableLog;
 extern ofstream InheritanceLog;
 extern Console g_console;
 
-namespace VTHelper
-{
-	bool IsValid(void* VTable_start, SectionInfo* sectionInfo);
-	vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo);
-	vector<uintptr_t> FindAll(SectionInfo* sectionInfo);
-}
+bool IsValid(void* VTable_start, SectionInfo* sectionInfo);
+vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo);
+vector<uintptr_t> FindAllVTables(SectionInfo* sectionInfo);
 
 string DemangleMSVC(char* symbol);
 void StringFilter(string& string, const std::string& substring);

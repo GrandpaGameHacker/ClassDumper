@@ -203,9 +203,12 @@
   <ItemGroup>
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="Path.cpp" />
     <ClCompile Include="RTTI.cpp" />
     <ClCompile Include="ModuleUtils.cpp" />
     <ClCompile Include="Dumper.cpp" />
+    <ClCompile Include="StringConversions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Console.h" />

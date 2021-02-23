@@ -14,7 +14,7 @@ I think its handy to have this information really fast rather than
 waiting for the binary to parse in these disassemblers.  
 
 And By fast I mean **FAST**  
-Generally it takes about a second or less to complete.
+Generally it takes about a 5 or less seconds to complete
 
 This remake completely changes how the tool works.
 Instead of reverse lookup which is VERY SLOW and CPU heavy, we use the PE Headers to find .text and .rdata sections  
