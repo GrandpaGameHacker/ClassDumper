@@ -216,6 +216,7 @@
     <ClInclude Include="stdheaders.h" />
     <ClInclude Include="ModuleUtils.h" />
     <ClInclude Include="Dumper.h" />
+    <ClInclude Include="StringConversions.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Theory.txt" />

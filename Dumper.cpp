@@ -1,5 +1,6 @@
 #include "Dumper.h"
 #include "Path.h"
+#include "StringConversions.h"
 
 bool VTHelper::IsValid(void* VTable_start, SectionInfo* sectionInfo)
 {
@@ -136,19 +137,31 @@ const size_t bufsize = 1024 * 1024;
 char buf1[bufsize];
 char buf2[bufsize];
 
-void InitializeLogs()
+void InitializeLogs(string folderName)
 {
+	string vtable_path = utf8_encode(GetDesktopPath());
+	string inheritance_path = vtable_path;
 
-	wstring vtable_path = GetDesktopPath();
-	vtable_path.append(L"\\vtable.txt");
+	vtable_path += "/Class_Dumper/";
+	CreateDirectory(vtable_path.c_str(), 0);
+	vtable_path += folderName;
+	CreateDirectory(vtable_path.c_str(), 0);
+	vtable_path += "/vtable.txt";
 	VTableLog.open(vtable_path);
 
-	wstring inheritance_path = GetDesktopPath();
-	inheritance_path.append(L"\\inheritance.txt");
-	InheritanceLog.open(inheritance_path);
 	
-	InheritanceLog.rdbuf()->pubsetbuf(buf1, bufsize);
+	inheritance_path += "/Class_Dumps/";
+	CreateDirectory(inheritance_path.c_str(), 0);
+	inheritance_path += folderName;
+	CreateDirectory(inheritance_path.c_str(), 0);
+	inheritance_path += "/inheritance.txt";
+	InheritanceLog.open(inheritance_path);
+
+	VTableLog.rdbuf()->pubsetbuf(buf1, bufsize);
 	InheritanceLog.rdbuf()->pubsetbuf(buf2, bufsize);
+
+	cout << vtable_path << "\n";
+	cout << inheritance_path << "\n";
 }
 
 void LogModuleStart(char* moduleName)
