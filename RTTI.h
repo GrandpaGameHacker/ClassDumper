@@ -1,12 +1,5 @@
 #pragma once
 #include <Windows.h>
-// RTTI
-//struct CompleteObjectLocator;
-//struct ClassHierarchyDescriptor;
-//struct BaseClassArray;
-//struct BaseClassDescriptor;
-//struct PMD;
-//struct TypeDescriptor;
 
 #ifdef _WIN64
 extern uintptr_t ModuleBase;
@@ -63,6 +56,7 @@ struct CompleteObjectLocator
 	TypeDescriptor* GetTypeDescriptor();
 	ClassHierarchyDescriptor* GetClassDescriptor();
 };
+
 #else
 
 struct TypeDescriptor
@@ -85,10 +79,13 @@ struct BaseClassDescriptor
 	unsigned long numContainedBases; // number of nested classes in BaseClassArray
 	PMD where; // pointer to member displacement info
 	unsigned long attributes; // flags, generally unused
+
+	TypeDescriptor* GetTypeDescriptor();
 };
 #pragma warning(disable : 4200)
 struct BaseClassArray {
 	BaseClassDescriptor* arrayOfBaseClassDescriptors[]; // describes base classes for the complete class
+	BaseClassDescriptor* GetBaseClassDescriptor(unsigned long index);
 };
 #pragma warning(default: 4200)
 
@@ -98,6 +95,8 @@ struct ClassHierarchyDescriptor
 	unsigned long attributes; // bit 0 set = multiple inheritance, bit 1 set = virtual inheritance
 	unsigned long numBaseClasses;// number of classes in pBaseClassArray
 	BaseClassArray* pBaseClassArray;
+
+	BaseClassArray* GetBaseClassArray();
 };
 
 struct CompleteObjectLocator
@@ -107,6 +106,24 @@ struct CompleteObjectLocator
 	unsigned long cdOffset; // constructor displacement offset
 	TypeDescriptor* pTypeDescriptor; //  TypeDescriptor of the complete class
 	ClassHierarchyDescriptor* pClassDescriptor; // describes inheritance hierarchy
-};
 
+	TypeDescriptor* GetTypeDescriptor();
+	ClassHierarchyDescriptor* GetClassDescriptor();
+};
 #endif
+
+struct ClassMeta {
+	ClassMeta(uintptr_t VTable);
+	BaseClassDescriptor* GetBaseClass(unsigned long index);
+
+	uintptr_t* VTable;
+	uintptr_t* Meta;
+	CompleteObjectLocator* COL;
+	TypeDescriptor* pTypeDescriptor;
+	ClassHierarchyDescriptor* pClassDescriptor;
+	BaseClassArray* pClassArray;
+	unsigned long numBaseClasses;
+	bool bMultipleInheritance;
+	bool bVirtualInheritance;
+	bool bAmbigious;
+};

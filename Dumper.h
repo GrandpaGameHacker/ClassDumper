@@ -32,4 +32,4 @@ void LogModuleStart(char* moduleName);
 void LogModuleEnd(char* moduleName);
 void CloseLogs();
 void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo);
-void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo);
+void DumpInheritanceInfo(uintptr_t VTable);

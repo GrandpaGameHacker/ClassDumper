@@ -42,25 +42,29 @@ void DllThread(HMODULE hModule)
 		// Read PE file and get section headers
 		SectionInfo* sectInfo = GetSectionInformation(target_module);
 		if (!sectInfo) {
-			g_console.WriteBold("Error with SectionInfo!\n");
+			g_console.WriteBold("Error: NULL Section Information!\n");
 			continue;
 		}
 
 		LogModuleStart(target_module->szModule);
+
 		auto vtable_list = FindAllVTables(sectInfo); // Scan for vtables
-		g_console.FWrite("[i] Found %d tables!\n\n", vtable_list.size());
-		// Sort vtables alphabetically by class name
+		g_console.FWrite("[i] Found %d virtual function tables!\n\n", vtable_list.size());
+
+		// Sort vtables alphabetically by class name then address
 		SortSymbols(vtable_list);
 
-		//Dump all the info for this module
+		//Dump all the metadata for this module
 		for (uintptr_t vtable : vtable_list) {
 			DumpVTableInfo(vtable, sectInfo);
-			DumpInheritanceInfo(vtable, sectInfo);
+			DumpInheritanceInfo(vtable);
 		}
+
 		LogModuleEnd(target_module->szModule);
 	}
 	auto end = chrono::high_resolution_clock::now();
 	g_console.FWrite("[+] Took %d milliseconds\n", chrono::duration_cast<chrono::milliseconds>(end - start).count());
+	g_console.Write("[i] Output will be in Desktop\\Class_Dumper\\...");
 	g_console.WaitInput();
 	CloseLogs();
 	FreeLibraryAndExitThread(hModule, -1);

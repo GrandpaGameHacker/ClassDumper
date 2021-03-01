@@ -184,37 +184,27 @@ void CloseLogs()
 
 void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 {
+	// used for multiple inheritance cases
 	static string LastclassName;
-	bool bIsVTableOffsetClass = false;
-	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
-	uintptr_t* meta_ptr = vftable_ptr - 1;
-	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
-#ifdef _WIN64
-	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor();
-	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor();
-	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray();
-#else
-	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
-	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
-	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
-#endif
-	string className = DemangleMSVC(&pTypeDescriptor->name);
-	string OwnerClassName = className;
-	FilterSymbol(OwnerClassName);
-	if (className == LastclassName && COL->offset != 0)
+	bool bIsVTableOffset = false;
+
+	ClassMeta classMeta = ClassMeta(VTable);
+
+	string className = DemangleMSVC(&classMeta.pTypeDescriptor->name);
+	string parentClassName = className;
+	FilterSymbol(parentClassName);
+
+	// if class is an interface/other class for the previous class
+	// grab the real name
+	if (className == LastclassName && classMeta.COL->offset != 0)
 	{
-		unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
-		unsigned long v_offset = COL->offset;
-		for (unsigned long i = 0; i < numBaseClasses; i++) {
-#ifdef _WIN64
-			BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i);
+		unsigned long v_offset = classMeta.COL->offset;
+		for (unsigned long i = 0; i < classMeta.numBaseClasses; i++) {
+			BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
 			TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
-#else
-			BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
-			TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
-#endif
+
 			if (pCurrentBaseClass->where.mdisp == v_offset) {
-				bIsVTableOffsetClass = true;
+				bIsVTableOffset = true;
 				className = DemangleMSVC(&pCurrentTypeDesc->name);
 				break;
 			}
@@ -223,32 +213,40 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	else {
 		LastclassName = className;
 	}
-	auto FunctionList = GetListOfFunctions((void*)VTable, sectionInfo);
-	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
-	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
-	char MH = (MultipleInheritance) ? 'M' : ' ';
-	char VH = (VirtualInheritance) ? 'V' : ' ';
-	if (bIsVTableOffsetClass) {
-		VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << OwnerClassName << " -> " << className << "\t" << "\n";
+	char M = (classMeta.bMultipleInheritance) ? 'M' : ' ';
+	char V = (classMeta.bVirtualInheritance) ? 'V' : ' ';
+	char A = (classMeta.bAmbigious) ? 'A' : ' ';
+
+	// dump table info
+	if (bIsVTableOffset) {
+		VTableLog << M << V << A
+			<< hex << " 0x" << VTable
+			<< "\t+" << GetRVA(VTable, sectionInfo)
+			<< "\t" << parentClassName << " -> " << className << "\t" << "\n";
 	}
 	else {
-		VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << className << "\t" << "\n";
+		VTableLog << M << V << A
+			<< hex << " 0x" << VTable
+			<< "\t+" << GetRVA(VTable, sectionInfo)
+			<< "\t" << className << "\t" << "\n";
 	}
-	
+	// dump functions
 	int index = 0;
+	auto FunctionList = GetListOfFunctions((void*)VTable, sectionInfo);
 	if (!FunctionList.empty())
 	{
 		VTableLog << "\tVirtual Functions:\n";
-		// Function Classification (Similar to IDA naming conventions) (disgusting code dont read)
+
+		//Simple Function Classification (Similar to IDA naming conventions)
 		for (auto function : FunctionList) {
-			VTableLog << "\t" << dec << index << "\t" << hex << "0x" << function << "\t+" << GetRVA(function, sectionInfo);
+
+			VTableLog << "\t" << dec << index
+				<< "\t" << hex << "0x" << function
+				<< "\t+" << GetRVA(function, sectionInfo);
+
 			BYTE* fnByte = (BYTE*) function;
-			if (fnByte[0] == RET_INSTR) {
+			if (fnByte[0] == RET_INSTR or fnByte[0] == RET_INT_INSTR) {
 				VTableLog << "\t\tnullsub_" << hex << function << "\n";
-			}
-			else if(fnByte[0] == RET_INT_INSTR){
-				WORD ret_integer = *(WORD*)&fnByte[1];
-				VTableLog << "\t\tret" << ret_integer << "_" << hex << function << "\n";
 			}
 			else
 			{
@@ -260,29 +258,20 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	VTableLog << "\n\n";
 }
 
-void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
+void DumpInheritanceInfo(uintptr_t VTable)
 {
-	static string LastclassName;
-	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
-	uintptr_t* meta_ptr = vftable_ptr - 1;
-	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
-#ifdef _WIN64
-	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor();
-	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor();
-	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray();
-#else
-	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
-	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
-	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
-#endif
-	string className = DemangleMSVC(&pTypeDescriptor->name);
+	static string LastclassName; //used for filtering duplicate classes (due to MH)
+
+	ClassMeta classMeta = ClassMeta(VTable);
+	
+	string className = DemangleMSVC(&classMeta.pTypeDescriptor->name);
 	if (className == LastclassName) {
 		return;
 	}
 	LastclassName = className;
+
 	FilterSymbol(className);
-	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
-	if (numBaseClasses > 1)\
+	if (classMeta.numBaseClasses > 1)
 	{
 		InheritanceLog << className << ":" << "\n";
 	}
@@ -291,18 +280,15 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 		InheritanceLog << className << " (No Base Classes)" << "\n\n";
 		return;
 	}
-	
-	for (unsigned long i = 1; i < numBaseClasses; i++) {
-#ifdef _WIN64
-		BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i);
+	// iterate and dump all base classes
+	for (unsigned long i = 1; i < classMeta.numBaseClasses; i++)
+	{
+
+		BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
-#else
-		BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
-		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
-#endif
 		ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
 		ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
-		ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
+		//ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
 
 		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
 		FilterSymbol(currentBaseClassName);
