@@ -120,7 +120,12 @@ bool SymbolComparator(uintptr_t v1, uintptr_t v2)
 	string Symbol1 = DemangleMSVC(&TD1->name);
 	string Symbol2 = DemangleMSVC(&TD2->name);
 	
-	return (Symbol1 < Symbol2);
+	if (Symbol1 == Symbol2) {
+		return (v1 < v2);
+	}
+	else {
+		return (Symbol1 < Symbol2);
+	}
 }
 
 void SortSymbols(vector<uintptr_t>& vtable_list)
@@ -179,29 +184,57 @@ void CloseLogs()
 
 void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 {
+	static string LastclassName;
+	bool bIsVTableOffsetClass = false;
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
 	uintptr_t* meta_ptr = vftable_ptr - 1;
 	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
 #ifdef _WIN64
 	TypeDescriptor* pTypeDescriptor = COL->GetTypeDescriptor();
 	ClassHierarchyDescriptor* pClassDescriptor = COL->GetClassDescriptor();
+	BaseClassArray* pClassArray = pClassDescriptor->GetBaseClassArray();
 #else
 	TypeDescriptor* pTypeDescriptor = COL->pTypeDescriptor;
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
+	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
 #endif
 	string className = DemangleMSVC(&pTypeDescriptor->name);
+	string OwnerClassName = className;
+	FilterSymbol(OwnerClassName);
+	if (className == LastclassName && COL->offset != 0)
+	{
+		unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
+		unsigned long v_offset = COL->offset;
+		for (unsigned long i = 0; i < numBaseClasses; i++) {
+#ifdef _WIN64
+			BaseClassDescriptor* pCurrentBaseClass = pClassArray->GetBaseClassDescriptor(i);
+			TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
+#else
+			BaseClassDescriptor* pCurrentBaseClass = pClassArray->arrayOfBaseClassDescriptors[i];
+			TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->pTypeDescriptor;
+#endif
+			if (pCurrentBaseClass->where.mdisp == v_offset) {
+				bIsVTableOffsetClass = true;
+				className = DemangleMSVC(&pCurrentTypeDesc->name);
+				break;
+			}
+		}
+	}
+	else {
+		LastclassName = className;
+	}
 	auto FunctionList = GetListOfFunctions((void*)VTable, sectionInfo);
 	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
 	bool VirtualInheritance = pClassDescriptor->attributes & 0b10;
 	char MH = (MultipleInheritance) ? 'M' : ' ';
 	char VH = (VirtualInheritance) ? 'V' : ' ';
-	/*
-	if(MultipleInheritance)
-	{
-		CallMultipleInheritanceHandler(VTable);
+	if (bIsVTableOffsetClass) {
+		VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << OwnerClassName << " -> " << className << "\t" << "\n";
 	}
-	*/
-	VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << className << "\t" << "\n";
+	else {
+		VTableLog << MH << VH << hex << "0x" << VTable << "\t+" << GetRVA(VTable, sectionInfo) << "\t" << className << "\t" << "\n";
+	}
+	
 	int index = 0;
 	if (!FunctionList.empty())
 	{
@@ -229,6 +262,7 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 
 void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 {
+	static string LastclassName;
 	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable);
 	uintptr_t* meta_ptr = vftable_ptr - 1;
 	CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
@@ -241,16 +275,13 @@ void DumpInheritanceInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	ClassHierarchyDescriptor* pClassDescriptor = COL->pClassDescriptor;
 	BaseClassArray* pClassArray = pClassDescriptor->pBaseClassArray;
 #endif
-	bool MultipleInheritance = pClassDescriptor->attributes & 0b01;
-	/*
-	if(MultipleInheritance)
-	{
-		CallMultipleInheritanceHandler2(VTable);
-	}
-	*/
-	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
 	string className = DemangleMSVC(&pTypeDescriptor->name);
+	if (className == LastclassName) {
+		return;
+	}
+	LastclassName = className;
 	FilterSymbol(className);
+	unsigned long numBaseClasses = pClassDescriptor->numBaseClasses;
 	if (numBaseClasses > 1)\
 	{
 		InheritanceLog << className << ":" << "\n";
