@@ -246,7 +246,7 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	if (!FunctionList.empty())
 	{
 		const size_t nFunctions = FunctionList.size();
-		VTableLog << "\tVirtual Functions (" << nFunctions << "):\n";
+		VTableLog << "\tVirtual Functions (" << dec << nFunctions << "):\n";
 
 		//Simple Function Classification (Similar to IDA naming conventions)
 		int index = 0;
@@ -295,23 +295,34 @@ void DumpInheritanceInfo(uintptr_t VTable)
 		return;
 	}
 	// iterate and dump all base classes
+	unsigned long prevMemberDisplacement = 0;
+	unsigned long treeIndex = 0;
 	for (unsigned long i = 1; i < classMeta.numBaseClasses; i++)
 	{
 		BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
-		const ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
-		const ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
+		const unsigned long memberDisplacement = pCurrentBaseClass->where.mdisp;
+		const unsigned long vbtableDisplacement = pCurrentBaseClass->where.pdisp;
 		//const ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp; // unused for now
-
 		string currentBaseClassName = DemangleMicrosoft(&pCurrentTypeDesc->name);
 		FilterSymbol(currentBaseClassName);
-		if (pdisp == -1)
+		if (vbtableDisplacement == -1)
 		{
+			InheritanceLog << hex << "0x" << memberDisplacement;
 			// if pdisp is -1, the vtable offset for base class is actually mdisp
-			InheritanceLog << hex << "0x" << mdisp << "\t";
+			if (memberDisplacement == prevMemberDisplacement) {
+				treeIndex++;
+			}
+			else {
+				treeIndex = 1;
+			}
+			for (auto i = 0; i < treeIndex; i++) {
+				InheritanceLog << "\t";
+			}
 		}
 		// else, I dont know how to parse the vbtable yet;
-		InheritanceLog << currentBaseClassName << "\n";
+		InheritanceLog << "\t" << currentBaseClassName << "\n";
+		prevMemberDisplacement = memberDisplacement;
 	}
 	InheritanceLog << "\n";
 }
