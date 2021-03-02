@@ -70,12 +70,13 @@ struct BaseClassDescriptor
 
 	TypeDescriptor* GetTypeDescriptor();
 };
-#pragma warning(disable : 4200)
+
 struct BaseClassArray {
-	BaseClassDescriptor* arrayOfBaseClassDescriptors[]; // describes base classes for the complete class
+	// 0x4000 is the maximum number of inheritance allowed in some standards, but it will never exceed that lol ;)
+	// Did this to avoid using C99 Variable Length Arrays, its not in the C++ standard
+	BaseClassDescriptor* arrayOfBaseClassDescriptors[0x4000]; // describes base classes for the complete class
 	BaseClassDescriptor* GetBaseClassDescriptor(unsigned long index);
 };
-#pragma warning(default: 4200)
 
 struct ClassHierarchyDescriptor
 {
