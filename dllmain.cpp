@@ -3,15 +3,15 @@
 
 Console g_console = Console(CONSOLE_TITLE);
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-					   DWORD  ul_reason_for_call,
-					   LPVOID lpReserved
-					 )
+BOOL APIENTRY DllMain(HMODULE hModule,
+                      DWORD ul_reason_for_call,
+                      LPVOID lpReserved
+)
 {
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
-		CreateThread(nullptr, NULL, (LPTHREAD_START_ROUTINE)&DllThread, hModule, NULL, nullptr);
+		CreateThread(nullptr, NULL, reinterpret_cast<LPTHREAD_START_ROUTINE>(&DllThread), hModule, NULL, nullptr);
 		break;
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
@@ -24,9 +24,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 void DllThread(HMODULE hModule)
 {
 	g_console.Write(HeadingArt);
-	auto start = chrono::high_resolution_clock::now();
+	const auto start = chrono::high_resolution_clock::now();
 	auto moduleList = GetModuleList(hModule); // Skip our module, we dont need that one
-	if (moduleList.empty()){
+	if (moduleList.empty())
+	{
 		g_console.WriteBold("GetModuleList Failed!\n");
 		Sleep(5000);
 		FreeLibraryAndExitThread(hModule, -1);
@@ -36,33 +37,36 @@ void DllThread(HMODULE hModule)
 	string moduleName = moduleList[0]->szModule;
 	moduleName = moduleName.substr(0, moduleName.length() - 4); // remove the .exe from the name
 	InitializeLogs(moduleName); // Create the log directories and file streams
-	for (auto target_module : moduleList) {
-		g_console.FWrite("[i] scanning %s\n", target_module->szModule);
+	for (auto *targetModule : moduleList)
+	{
+		g_console.FWrite("[i] scanning %s\n", targetModule->szModule);
 
 		// Read PE file and get section headers
-		SectionInfo* sectInfo = GetSectionInformation(target_module);
-		if (!sectInfo) {
+		SectionInfo* sectInfo = GetSectionInformation(targetModule);
+		if (!sectInfo)
+		{
 			g_console.WriteBold("Error: NULL Section Information!\n");
 			continue;
 		}
 
-		LogModuleStart(target_module->szModule);
+		LogModuleStart(targetModule->szModule);
 
-		auto vtable_list = FindAllVTables(sectInfo); // Scan for vtables
-		g_console.FWrite("[i] Found %d virtual function tables!\n\n", vtable_list.size());
+		auto vtableList = FindAllVTables(sectInfo); // Scan for vtables
+		g_console.FWrite("[i] Found %d virtual function tables!\n\n", vtableList.size());
 
 		// Sort vtables alphabetically by class name then address
-		SortSymbols(vtable_list);
+		SortSymbols(vtableList);
 
 		//Dump all the metadata for this module
-		for (uintptr_t vtable : vtable_list) {
+		for (auto vtable : vtableList)
+		{
 			DumpVTableInfo(vtable, sectInfo);
 			DumpInheritanceInfo(vtable);
 		}
 
-		LogModuleEnd(target_module->szModule);
+		LogModuleEnd(targetModule->szModule);
 	}
-	auto end = chrono::high_resolution_clock::now();
+	const auto end = chrono::high_resolution_clock::now();
 	g_console.FWrite("[+] Took %d milliseconds\n", chrono::duration_cast<chrono::milliseconds>(end - start).count());
 	g_console.Write("[i] Output will be in Desktop\\Class_Dumper\\...");
 	g_console.WaitInput();

@@ -3,23 +3,28 @@
 
 bool IsValid(void* VTable_start, SectionInfo* sectionInfo)
 {
-	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
-	uintptr_t* meta_ptr = vftable_ptr - 1;
-	if (sectionInfo->RDATA.base <= *meta_ptr && *meta_ptr <= sectionInfo->RDATA.end) {
-		if (sectionInfo->TEXT.base <= *vftable_ptr && *vftable_ptr <= sectionInfo->TEXT.end) {
-			CompleteObjectLocator* COL = reinterpret_cast<CompleteObjectLocator*>(*meta_ptr);
+	auto* vtable = static_cast<uintptr_t*>(VTable_start);
+	auto* meta = vtable - 1;
+	if (sectionInfo->RDATA.base <= *meta && *meta <= sectionInfo->RDATA.end)
+	{
+		if (sectionInfo->TEXT.base <= *vtable && *vtable <= sectionInfo->TEXT.end)
+		{
+			auto* COL = reinterpret_cast<CompleteObjectLocator*>(*meta);
 #ifdef _WIN64
-			if (COL->signature == 1) {
-				auto TypeDesc = COL->GetTypeDescriptor();
+			if (COL->signature == 1)
+			{
+				auto *descriptor = COL->GetTypeDescriptor();
 #else
 			if (COL->signature == 0) {
-				auto TypeDesc = COL->pTypeDescriptor;
+				auto descriptor = COL->pTypeDescriptor;
 #endif
-				if (IsBadReadPointer(reinterpret_cast<void*>(TypeDesc)) != 0) {
+				if (IsBadReadPointer(reinterpret_cast<void*>(descriptor)) != 0)
+				{
 					return false;
 				}
 				// Test if string is ".?AV" real quick
-				if (*reinterpret_cast<unsigned long*>(&TypeDesc->name) == TYPEDESCRIPTOR_SIGNITURE) {
+				if (*reinterpret_cast<unsigned long*>(&descriptor->name) == TYPEDESCRIPTOR_SIGNITURE)
+				{
 					return true;
 				}
 			}
@@ -31,47 +36,51 @@ bool IsValid(void* VTable_start, SectionInfo* sectionInfo)
 vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo)
 {
 	vector<uintptr_t> functionList;
-	uintptr_t* vftable_ptr = reinterpret_cast<uintptr_t*>(VTable_start);
-	uintptr_t function_ptr = *vftable_ptr;
-	while (sectionInfo->TEXT.base <= function_ptr && function_ptr <= sectionInfo->TEXT.end) {
+	auto* vtable = static_cast<uintptr_t*>(VTable_start);
+	auto function_ptr = *vtable;
+	while (sectionInfo->TEXT.base <= function_ptr && function_ptr <= sectionInfo->TEXT.end)
+	{
 		functionList.push_back(function_ptr);
-		vftable_ptr++;
-		function_ptr = *vftable_ptr;
+		vtable++;
+		function_ptr = *vtable;
 	}
 	return functionList;
 }
 
 vector<uintptr_t> FindAllVTables(SectionInfo* sectionInfo)
 {
-	vector<uintptr_t> VTableList;
+	vector<uintptr_t> vtableList;
 	uintptr_t ptr = sectionInfo->RDATA.base + sizeof(uintptr_t);
-	while (ptr < sectionInfo->RDATA.end) {
-		if (IsValid(reinterpret_cast<void*>(ptr), sectionInfo)) {
-			VTableList.push_back(ptr);
+	while (ptr < sectionInfo->RDATA.end)
+	{
+		if (IsValid(reinterpret_cast<void*>(ptr), sectionInfo))
+		{
+			vtableList.push_back(ptr);
 		}
 		ptr += sizeof(uintptr_t);
 	}
-	return VTableList;
+	return vtableList;
 }
 
-const string VFTableSymbolStart = "??_7";
-const string VFTableSymbolEnd = "6B@";
+const string VTABLE_SYMBOL_PREFIX = "??_7";
+const string VTABLE_SYMBOL_SUFFIX = "6B@";
 static char buff[0x1000];
 
-string DemangleMSVC(char* symbol)
+string DemangleMicrosoft(char* symbol)
 {
 	memset(buff, 0, 0x1000);
 	char* pSymbol = symbol;
-	if (*(char*)(symbol + 4) == '?') pSymbol = symbol + 1;
-	else if (*(char*)symbol == '.') pSymbol = symbol + 4;
-	else if (*(char*)symbol == '?') pSymbol = symbol + 2;
+	// don't question this magic, it works :)
+	if (*static_cast<char*>(symbol + 4) == '?') pSymbol = symbol + 1;
+	else if (*static_cast<char*>(symbol) == '.') pSymbol = symbol + 4;
+	else if (*static_cast<char*>(symbol) == '?') pSymbol = symbol + 2;
 	else
 	{
 		g_console.WriteBold("invalid msvc mangled name");
 	}
 	string ModifiedSymbol = pSymbol;
-	ModifiedSymbol.insert(0, VFTableSymbolStart);
-	ModifiedSymbol.insert(ModifiedSymbol.size(), VFTableSymbolEnd);
+	ModifiedSymbol.insert(0, VTABLE_SYMBOL_PREFIX);
+	ModifiedSymbol.insert(ModifiedSymbol.size(), VTABLE_SYMBOL_SUFFIX);
 	if (!((UnDecorateSymbolName(ModifiedSymbol.c_str(), buff, 0x1000, 0)) != 0))
 	{
 		g_console.FWriteBold("Error Code: %d", GetLastError());
@@ -89,74 +98,71 @@ void StringFilter(string& string, const std::string& substring)
 	}
 }
 
-void FilterSymbol(string& Symbol)
+static vector<string> filters =
 {
-	vector<string> filters = 
+	"::`vftable'",
+	"const ",
+	"::`anonymous namespace'"
+};
+
+void FilterSymbol(string& symbol)
+{
+	for (auto& filter : filters)
 	{
-		"::`vftable'",
-		"const ",
-		"::`anonymous namespace'"
-	};
-	for (string filter : filters)
-	{
-		StringFilter(Symbol, filter);
+		StringFilter(symbol, filter);
 	}
 }
 
 bool SymbolComparator(uintptr_t v1, uintptr_t v2)
 {
-	v1 = v1 - sizeof(uintptr_t); v2 = v2 - sizeof(uintptr_t);
-	uintptr_t* v1p = (uintptr_t*) v1; uintptr_t* v2p = (uintptr_t*) v2;
-	CompleteObjectLocator* COL1 = reinterpret_cast<CompleteObjectLocator*>(*v1p);
-	CompleteObjectLocator* COL2 = reinterpret_cast<CompleteObjectLocator*>(*v2p);
-#ifdef _WIN64
-	TypeDescriptor* TD1 = COL1->GetTypeDescriptor();
-	TypeDescriptor* TD2 = COL2->GetTypeDescriptor();
-#else
-	TypeDescriptor* TD1 = COL1->pTypeDescriptor;
-	TypeDescriptor* TD2 = COL2->pTypeDescriptor;
-#endif
+	v1 = v1 - sizeof(uintptr_t);
+	v2 = v2 - sizeof(uintptr_t);
+	auto* pv1 = reinterpret_cast<uintptr_t*>(v1);
+	auto* pv2 = reinterpret_cast<uintptr_t*>(v2);
+	auto* col1 = reinterpret_cast<CompleteObjectLocator*>(*pv1);
+	auto* col2 = reinterpret_cast<CompleteObjectLocator*>(*pv2);
+	auto* td1 = col1->GetTypeDescriptor();
+	auto* td2 = col2->GetTypeDescriptor();
 
-	string Symbol1 = DemangleMSVC(&TD1->name);
-	string Symbol2 = DemangleMSVC(&TD2->name);
-	
-	if (Symbol1 == Symbol2) {
+	const auto symbol1 = DemangleMicrosoft(&td1->name);
+	const auto symbol2 = DemangleMicrosoft(&td2->name);
+
+	if (symbol1 == symbol2)
+	{
 		return (v1 < v2);
 	}
-	else {
-		return (Symbol1 < Symbol2);
-	}
+	return (symbol1 < symbol2);
 }
 
-void SortSymbols(vector<uintptr_t>& vtable_list)
+void SortSymbols(vector<uintptr_t>& vtableList)
 {
-	sort(vtable_list.begin(), vtable_list.end(), SymbolComparator);
+	sort(vtableList.begin(), vtableList.end(), SymbolComparator);
 }
 
-
+// having a big buffer seems to speed things up
 ofstream VTableLog;
 ofstream InheritanceLog;
 const size_t bufsize = 1024 * 1024;
 char buf1[bufsize];
 char buf2[bufsize];
 
-void InitializeLogs(string folderName)
+void InitializeLogs(const string& folderName)
 {
-	string vtable_path = utf8_encode(GetDesktopPath());
+	string vtable_path = Utf8Encode(GetDesktopPath());
 	string inheritance_path = vtable_path;
 
 	vtable_path += "/Class_Dumper/";
-	CreateDirectory(vtable_path.c_str(), 0);
+	CreateDirectory(vtable_path.c_str(), nullptr);
 	vtable_path += folderName;
-	CreateDirectory(vtable_path.c_str(), 0);
+	CreateDirectory(vtable_path.c_str(), nullptr);
 	vtable_path += "/vtable.txt";
 	VTableLog.open(vtable_path);
 
-	
+
 	inheritance_path += "/Class_Dumper/";
-	CreateDirectory(inheritance_path.c_str(), 0);
+	CreateDirectory(inheritance_path.c_str(), nullptr);
 	inheritance_path += folderName;
-	CreateDirectory(inheritance_path.c_str(), 0);
+	CreateDirectory(inheritance_path.c_str(), nullptr);
 	inheritance_path += "/inheritance.txt";
 	InheritanceLog.open(inheritance_path);
 
@@ -184,47 +190,52 @@ void CloseLogs()
 
 void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 {
-	// used for multiple inheritance cases
-	static string LastclassName;
+	static string prevClassName;
 	bool bIsVTableOffset = false;
 
-	ClassMeta classMeta = ClassMeta(VTable);
+	auto classMeta = ClassMeta(VTable);
 
-	string className = DemangleMSVC(&classMeta.pTypeDescriptor->name);
+	string className = DemangleMicrosoft(&classMeta.pTypeDescriptor->name);
 	string parentClassName = className;
 	FilterSymbol(parentClassName);
 
-	// if class is an interface/other class for the previous class
+	// if class is an interface/inherited virtual class for the previous class
 	// grab the real name
-	if (className == LastclassName && classMeta.COL->offset != 0)
+	if (className == prevClassName && classMeta.COL->offset != 0)
 	{
-		unsigned long v_offset = classMeta.COL->offset;
-		for (unsigned long i = 0; i < classMeta.numBaseClasses; i++) {
+		const unsigned long v_offset = classMeta.COL->offset;
+		for (unsigned long i = 0; i < classMeta.numBaseClasses; i++)
+		{
 			BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
 			TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
 
-			if (pCurrentBaseClass->where.mdisp == v_offset) {
+			if (pCurrentBaseClass->where.mdisp == v_offset)
+			{
 				bIsVTableOffset = true;
-				className = DemangleMSVC(&pCurrentTypeDesc->name);
+				className = DemangleMicrosoft(&pCurrentTypeDesc->name);
 				break;
 			}
 		}
 	}
-	else {
-		LastclassName = className;
+	else
+	{
+		prevClassName = className;
 	}
-	char M = (classMeta.bMultipleInheritance) ? 'M' : ' ';
-	char V = (classMeta.bVirtualInheritance) ? 'V' : ' ';
-	char A = (classMeta.bAmbigious) ? 'A' : ' ';
+	// virtual class attributes
+	const char M = (classMeta.bMultipleInheritance) ? 'M' : ' ';
+	const char V = (classMeta.bVirtualInheritance) ? 'V' : ' ';
+	const char A = (classMeta.bAmbigious) ? 'A' : ' ';
 
 	// dump table info
-	if (bIsVTableOffset) {
+	if (bIsVTableOffset)
+	{
 		VTableLog << M << V << A
 			<< hex << " 0x" << VTable
 			<< "\t+" << GetRVA(VTable, sectionInfo)
 			<< "\t" << parentClassName << " -> " << className << "\t" << "\n";
 	}
-	else {
+	else
+	{
 		VTableLog << M << V << A
 			<< hex << " 0x" << VTable
 			<< "\t+" << GetRVA(VTable, sectionInfo)
@@ -232,20 +243,22 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 	}
 	// dump functions
 	int index = 0;
-	auto FunctionList = GetListOfFunctions((void*)VTable, sectionInfo);
+	auto FunctionList = GetListOfFunctions(reinterpret_cast<void*>(VTable), sectionInfo);
 	if (!FunctionList.empty())
 	{
-		VTableLog << "\tVirtual Functions:\n";
+		const size_t nFunctions = FunctionList.size();
+		VTableLog << "\tVirtual Functions (" << nFunctions << "):\n";
 
 		//Simple Function Classification (Similar to IDA naming conventions)
-		for (auto function : FunctionList) {
-
+		for (auto function : FunctionList)
+		{
 			VTableLog << "\t" << dec << index
 				<< "\t" << hex << "0x" << function
 				<< "\t+" << GetRVA(function, sectionInfo);
 
-			BYTE* fnByte = (BYTE*) function;
-			if (fnByte[0] == RET_INSTR or fnByte[0] == RET_INT_INSTR) {
+			BYTE* fnByte = reinterpret_cast<BYTE*>(function);
+			if (fnByte[0] == RET_INSTR or fnByte[0] == RET_INT_INSTR)
+			{
 				VTableLog << "\t\tnullsub_" << hex << function << "\n";
 			}
 			else
@@ -260,14 +273,15 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 
 void DumpInheritanceInfo(uintptr_t VTable)
 {
-	static string LastclassName; //used for filtering duplicate classes (due to MH)
+	static string LastclassName; //used for filtering duplicate classes
 
-	ClassMeta classMeta = ClassMeta(VTable);
-	
-	string className = DemangleMSVC(&classMeta.pTypeDescriptor->name);
-	if (className == LastclassName) {
+	auto classMeta = ClassMeta(VTable);
+
+	string className = DemangleMicrosoft(&classMeta.pTypeDescriptor->name);
+
+	if (className == LastclassName)
 		return;
-	}
+
 	LastclassName = className;
 
 	FilterSymbol(className);
@@ -283,16 +297,17 @@ void DumpInheritanceInfo(uintptr_t VTable)
 	// iterate and dump all base classes
 	for (unsigned long i = 1; i < classMeta.numBaseClasses; i++)
 	{
-
 		BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
 		TypeDescriptor* pCurrentTypeDesc = pCurrentBaseClass->GetTypeDescriptor();
-		ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
-		ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
-		//ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp;
+		const ptrdiff_t mdisp = pCurrentBaseClass->where.mdisp;
+		const ptrdiff_t pdisp = pCurrentBaseClass->where.pdisp;
+		//const ptrdiff_t vdisp = pCurrentBaseClass->where.vdisp; // unused for now
 
-		string currentBaseClassName = DemangleMSVC(&pCurrentTypeDesc->name);
+		string currentBaseClassName = DemangleMicrosoft(&pCurrentTypeDesc->name);
 		FilterSymbol(currentBaseClassName);
-		if (pdisp == -1) { // if pdisp is -1, the vtable offset for base class is actually mdisp
+		if (pdisp == -1)
+		{
+			// if pdisp is -1, the vtable offset for base class is actually mdisp
 			InheritanceLog << hex << "0x" << mdisp << "\t";
 		}
 		// else, I dont know how to parse the vbtable yet;

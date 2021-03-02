@@ -1,15 +1,11 @@
 #pragma once
 #include "stdheaders.h"
-
-#define ESC "\x1b"
-#define CSI "\x1b["
-
-#define CONSTYLE_BOLD BACKGROUND_RED | BACKGROUND_INTENSITY
-#define CONSTYLE_DEFAULT FOREGROUND_GREEN | FOREGROUND_INTENSITY
+constexpr WORD CONSTYLE_BOLD = (BACKGROUND_RED | BACKGROUND_INTENSITY);
+constexpr WORD CONSTYLE_DEFAULT = (FOREGROUND_GREEN | FOREGROUND_INTENSITY);
 
 class Console
 {
-	FILE* m_fpIn, *m_fpOut, *m_fpErr;
+	FILE *m_fpIn, *m_fpOut, *m_fpErr;
 	HANDLE m_hStdin, m_hStdout;
 	CONSOLE_SCREEN_BUFFER_INFO m_csbi;
 public:
@@ -21,7 +17,7 @@ public:
 	void Free();
 
 	void SetTitle(const std::string& str);
-	void SetFont(const std::wstring& fontName, int size);
+	void SetFont(const std::wstring& fontName, short size);
 	void SetCtrlHandler(PHANDLER_ROUTINE HandlerRoutine, BOOL Add);
 	void SetAttribute(WORD attribute);
 
@@ -32,6 +28,4 @@ public:
 	void FWriteBold(const char* format, ...);
 
 	void WaitInput();
-
 };
-

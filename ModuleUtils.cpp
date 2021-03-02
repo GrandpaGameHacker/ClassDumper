@@ -2,17 +2,18 @@
 
 bool IsSystemModule(MODULEENTRY32* Module)
 {
-	std::string modstr = Module->szExePath;
-	if (modstr.find("\\Windows\\") != std::string::npos) {
+	const std::string modstr = Module->szExePath;
+	if (modstr.find("\\Windows\\") != std::string::npos)
+	{
 		return true;
 	}
 	return false;
 }
 
-void GetModuleInfo(char* ModuleName, MODULEINFO* ModuleInfo) {
-	HMODULE Module{ 0 };
-	Module = GetModuleHandle(ModuleName);
-	if(Module != NULL)
+void GetModuleInfo(char* ModuleName, MODULEINFO* ModuleInfo)
+{
+	const HMODULE Module = GetModuleHandle(ModuleName);
+	if (Module != nullptr)
 		GetModuleInformation(GetCurrentProcess(), Module, ModuleInfo, sizeof(MODULEINFO));
 }
 
@@ -24,23 +25,28 @@ std::vector<MODULEENTRY32*> GetModuleList(HMODULE skipModule)
 	{
 		return moduleList;
 	}
-	MODULEENTRY32* ModuleEntry = new MODULEENTRY32;
+	auto *ModuleEntry = new MODULEENTRY32;
 	ModuleEntry->dwSize = sizeof(MODULEENTRY32);
-	if (!Module32First(hModuleSnap, ModuleEntry)) {
+	if (!Module32First(hModuleSnap, ModuleEntry))
+	{
 		delete ModuleEntry;
 		return moduleList;
 	}
-	for (;;) {
-		if (ModuleEntry->hModule != skipModule && !IsSystemModule(ModuleEntry)) {
+	for (;;)
+	{
+		if (ModuleEntry->hModule != skipModule && !IsSystemModule(ModuleEntry))
+		{
 			moduleList.push_back(ModuleEntry);
 		}
-		else {
+		else
+		{
 			delete ModuleEntry;
 		}
-		
+
 		ModuleEntry = new MODULEENTRY32;
 		ModuleEntry->dwSize = sizeof(MODULEENTRY32);
-		if (!Module32Next(hModuleSnap, ModuleEntry)) {
+		if (!Module32Next(hModuleSnap, ModuleEntry))
+		{
 			delete ModuleEntry;
 			return moduleList;
 		}
@@ -49,36 +55,40 @@ std::vector<MODULEENTRY32*> GetModuleList(HMODULE skipModule)
 
 SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 {
-	SectionInfo* sectionInfo = new SectionInfo;
-	memset((void*)sectionInfo, 0, sizeof(SectionInfo));
+	auto *sectionInfo = new SectionInfo;
+	memset(static_cast<void*>(sectionInfo), 0, sizeof(SectionInfo));
 	BYTE* MBase = Module->modBaseAddr;
-	sectionInfo->ModuleBase = (uintptr_t) MBase;
-	IMAGE_DOS_HEADER* DosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(MBase);
-	if (!DosHeader || DosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+	sectionInfo->ModuleBase = reinterpret_cast<uintptr_t>(MBase);
+	auto *DosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(MBase);
+	if (!DosHeader || DosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+	{
 		delete sectionInfo;
 		return nullptr;
 	}
-	IMAGE_NT_HEADERS* NTHeader = reinterpret_cast<IMAGE_NT_HEADERS*>(MBase + DosHeader->e_lfanew);
-	if (!NTHeader || NTHeader->Signature != IMAGE_NT_SIGNATURE){
+	auto *NTHeader = reinterpret_cast<IMAGE_NT_HEADERS*>(MBase + DosHeader->e_lfanew);
+	if (!NTHeader || NTHeader->Signature != IMAGE_NT_SIGNATURE)
+	{
 		delete sectionInfo;
 		return nullptr;
 	}
-	WORD NumberOfSections = NTHeader->FileHeader.NumberOfSections;
+	const WORD NumberOfSections = NTHeader->FileHeader.NumberOfSections;
 	IMAGE_SECTION_HEADER* Section = IMAGE_FIRST_SECTION(NTHeader);
 	bool TEXT_found = false;
 	bool RDATA_found = false;
-	for (WORD i = 0; i < NumberOfSections; i++) {
-		if (strcmp((const char*)Section[i].Name, ".text") == 0)
+	for (WORD i = 0; i < NumberOfSections; i++)
+	{
+		if (strcmp(reinterpret_cast<char const*>(Section[i].Name), ".text") == 0)
 		{
-			sectionInfo->TEXT.base = Section[i].VirtualAddress + (uintptr_t)MBase;
+			sectionInfo->TEXT.base = Section[i].VirtualAddress + reinterpret_cast<uintptr_t>(MBase);
 			sectionInfo->TEXT.size = Section[i].SizeOfRawData;
 			sectionInfo->TEXT.end = sectionInfo->TEXT.base + sectionInfo->TEXT.size - 1;
 			TEXT_found = true;
 			continue;
 		}
-		if (strcmp((const char*)Section[i].Name, ".rdata") == 0)
+		if (strcmp(reinterpret_cast<char const*>(Section[i].Name), ".rdata") == 0)
 		{
-			sectionInfo->RDATA.base = Section[i].VirtualAddress + (uintptr_t)MBase;
+			sectionInfo->RDATA.base = Section[i].VirtualAddress + reinterpret_cast<uintptr_t>(MBase);
+			MBase;
 			sectionInfo->RDATA.size = Section[i].SizeOfRawData;
 			sectionInfo->RDATA.end = sectionInfo->RDATA.base + sectionInfo->RDATA.size - 1;
 			RDATA_found = true;
@@ -86,7 +96,8 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 		if (TEXT_found && RDATA_found)
 			break;
 	}
-	if (sectionInfo->TEXT.base && sectionInfo->RDATA.base) {
+	if (sectionInfo->TEXT.base && sectionInfo->RDATA.base)
+	{
 		return sectionInfo;
 	}
 	delete sectionInfo;
@@ -97,6 +108,3 @@ uintptr_t GetRVA(uintptr_t VA, SectionInfo* sectionInfo)
 {
 	return VA - sectionInfo->ModuleBase;
 }
-
-
-

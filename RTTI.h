@@ -1,8 +1,13 @@
 #pragma once
 #include <Windows.h>
 
-#ifdef _WIN64
-extern uintptr_t ModuleBase;
+struct PMD
+{
+	unsigned long mdisp; // member displacement
+	long pdisp; // vbtable displacement
+	long vdisp; // displacement inside vbtable
+};
+
 struct TypeDescriptor
 {
 	uintptr_t pVFTable; // type_info vftable ptr
@@ -10,12 +15,8 @@ struct TypeDescriptor
 	char name; // type name
 };
 
-struct PMD
-{
-	int mdisp; // member displacement
-	int pdisp; // vbtable displacement
-	int vdisp; // displacement inside vbtable
-};
+#ifdef _WIN64
+extern uintptr_t ModuleBase;
 
 struct BaseClassDescriptor
 {
@@ -28,7 +29,8 @@ struct BaseClassDescriptor
 };
 
 #pragma warning(disable : 4200)
-struct BaseClassArray {
+struct BaseClassArray
+{
 	unsigned long arrayOfBaseClassDescriptorOffsets[]; // describes base classes for the complete class
 	BaseClassDescriptor* GetBaseClassDescriptor(unsigned long index);
 };
@@ -38,7 +40,7 @@ struct ClassHierarchyDescriptor
 {
 	unsigned long signature; // 1 if 64 bit, 0 if 32bit
 	unsigned long attributes; // bit 0 set = multiple inheritance, bit 1 set = virtual inheritance
-	unsigned long numBaseClasses;// number of classes in pBaseClassArray
+	unsigned long numBaseClasses; // number of classes in pBaseClassArray
 	unsigned long BaseClassArrayOffset;
 
 	BaseClassArray* GetBaseClassArray();
@@ -58,20 +60,6 @@ struct CompleteObjectLocator
 };
 
 #else
-
-struct TypeDescriptor
-{
-	uintptr_t pVFTable; // type_info vftable ptr
-	uintptr_t reserved; // reserved for future use
-	char name; // type name
-};
-
-struct PMD
-{
-	int mdisp; // member displacement
-	int pdisp; // vbtable displacement
-	int vdisp; // displacement inside vbtable
-};
 
 struct BaseClassDescriptor
 {
@@ -112,8 +100,9 @@ struct CompleteObjectLocator
 };
 #endif
 
-struct ClassMeta {
-	ClassMeta(uintptr_t VTable);
+struct ClassMeta
+{
+	explicit ClassMeta(uintptr_t VTable);
 	BaseClassDescriptor* GetBaseClass(unsigned long index);
 
 	uintptr_t* VTable;

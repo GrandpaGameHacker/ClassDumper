@@ -19,15 +19,15 @@ bool IsValid(void* VTable_start, SectionInfo* sectionInfo);
 vector<uintptr_t> GetListOfFunctions(void* VTable_start, SectionInfo* sectionInfo);
 vector<uintptr_t> FindAllVTables(SectionInfo* sectionInfo);
 
-string DemangleMSVC(char* symbol);
+string DemangleMicrosoft(char* symbol);
 void StringFilter(string& string, const std::string& substring);
-void FilterSymbol(string& Symbol);
+void FilterSymbol(string& symbol);
 
 bool SymbolComparator(uintptr_t v1, uintptr_t v2);
-void SortSymbols(vector<uintptr_t>& vtable_list);
+void SortSymbols(vector<uintptr_t>& vtableList);
 
 
-void InitializeLogs(string folderName);
+void InitializeLogs(const string& folderName);
 void LogModuleStart(char* moduleName);
 void LogModuleEnd(char* moduleName);
 void CloseLogs();

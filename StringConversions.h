@@ -1,5 +1,5 @@
 #pragma once
 #include <string>
 #include <windows.h>
-std::string utf8_encode(const std::wstring& wstr);
-std::wstring utf8_decode(const std::string& str);
+std::string Utf8Encode(const std::wstring& wstr);
+std::wstring Utf8Decode(const std::string& str);

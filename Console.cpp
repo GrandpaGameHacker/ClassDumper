@@ -1,13 +1,12 @@
 #include "Console.h"
 
 
-
 Console::Console() :
 	m_fpIn(nullptr),
 	m_fpOut(nullptr),
 	m_fpErr(nullptr),
-	m_hStdin(NULL),
-	m_hStdout(NULL),
+	m_hStdin(nullptr),
+	m_hStdout(nullptr),
 	m_csbi()
 {
 	Init();
@@ -17,8 +16,8 @@ Console::Console(const std::string& title) :
 	m_fpIn(nullptr),
 	m_fpOut(nullptr),
 	m_fpErr(nullptr),
-	m_hStdin(NULL),
-	m_hStdout(NULL),
+	m_hStdin(nullptr),
+	m_hStdout(nullptr),
 	m_csbi()
 {
 	Init();
@@ -59,7 +58,7 @@ void Console::SetTitle(const std::string& str)
 	SetConsoleTitle(str.c_str());
 }
 
-void Console::SetFont(const std::wstring& fontName, int size)
+void Console::SetFont(const std::wstring& fontName, short size)
 {
 	CONSOLE_FONT_INFOEX cfi;
 	cfi.cbSize = sizeof cfi;
@@ -98,12 +97,12 @@ void Console::ClearScreen()
 	scrollRect.Bottom = m_csbi.dwSize.Y;
 
 	scrollTarget.X = 0;
-	scrollTarget.Y = (SHORT)(0 - m_csbi.dwSize.Y);
+	scrollTarget.Y = static_cast<SHORT>(0 - m_csbi.dwSize.Y);
 
 	fill.Char.UnicodeChar = TEXT(' ');
 	fill.Attributes = m_csbi.wAttributes;
 
-	ScrollConsoleScreenBuffer(m_hStdout, &scrollRect, NULL, scrollTarget, &fill);
+	ScrollConsoleScreenBuffer(m_hStdout, &scrollRect, nullptr, scrollTarget, &fill);
 
 	m_csbi.dwCursorPosition.X = 0;
 	m_csbi.dwCursorPosition.Y = 0;
@@ -145,5 +144,5 @@ void Console::FWriteBold(const char* format, ...)
 void Console::WaitInput()
 {
 	std::cout << "Press anything to continue...\n";
-	int c = getchar(); // VS Be like "wahh you never used the return value" piss off vs
+	getchar();
 }

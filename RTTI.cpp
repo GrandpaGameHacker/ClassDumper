@@ -1,11 +1,14 @@
 #include "RTTI.h"
 #ifdef _WIN64
 uintptr_t ModuleBase = 0;
-TypeDescriptor* CompleteObjectLocator::GetTypeDescriptor() {
-	uintptr_t ptr = (uintptr_t) &signature;
+
+TypeDescriptor* CompleteObjectLocator::GetTypeDescriptor()
+{
+	const auto ptr = reinterpret_cast<uintptr_t>(&signature);
 	ModuleBase = ptr - CompleteObjectLocatorOffset;
 	return reinterpret_cast<TypeDescriptor*>(ModuleBase + TypeDescriptorOffset);
 }
+
 ClassHierarchyDescriptor* CompleteObjectLocator::GetClassDescriptor()
 {
 	return reinterpret_cast<ClassHierarchyDescriptor*>(ModuleBase + ClassDescriptorOffset);
@@ -55,7 +58,7 @@ TypeDescriptor* BaseClassDescriptor::GetTypeDescriptor()
 
 ClassMeta::ClassMeta(uintptr_t VTable)
 {
-	this->VTable = (uintptr_t*) VTable;
+	this->VTable = reinterpret_cast<uintptr_t*>(VTable);
 	this->Meta = this->VTable - 1;
 	COL = reinterpret_cast<CompleteObjectLocator*>(*Meta);
 	pTypeDescriptor = COL->GetTypeDescriptor();
