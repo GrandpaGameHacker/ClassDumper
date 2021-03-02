@@ -17,4 +17,4 @@ inline const char* HeadingArt =
 	"       Version 1.3                                                                $$ |                          \n"
 	"                                                                                   $$/                           \n\n";
 
-void DllThread(HMODULE hModule);
+DWORD WINAPI DllThread(void* lpParam);

@@ -73,9 +73,4 @@
       <Filter>Readme</Filter>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="Theory.txt">
-      <Filter>Readme</Filter>
-    </Text>
-  </ItemGroup>
 </Project>

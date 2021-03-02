@@ -242,7 +242,6 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 			<< "\t" << className << "\t" << "\n";
 	}
 	// dump functions
-	int index = 0;
 	auto FunctionList = GetListOfFunctions(reinterpret_cast<void*>(VTable), sectionInfo);
 	if (!FunctionList.empty())
 	{
@@ -250,6 +249,7 @@ void DumpVTableInfo(uintptr_t VTable, SectionInfo* sectionInfo)
 		VTableLog << "\tVirtual Functions (" << nFunctions << "):\n";
 
 		//Simple Function Classification (Similar to IDA naming conventions)
+		int index = 0;
 		for (auto function : FunctionList)
 		{
 			VTableLog << "\t" << dec << index

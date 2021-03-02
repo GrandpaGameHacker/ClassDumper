@@ -10,13 +10,6 @@ bool IsSystemModule(MODULEENTRY32* Module)
 	return false;
 }
 
-void GetModuleInfo(char* ModuleName, MODULEINFO* ModuleInfo)
-{
-	const HMODULE Module = GetModuleHandle(ModuleName);
-	if (Module != nullptr)
-		GetModuleInformation(GetCurrentProcess(), Module, ModuleInfo, sizeof(MODULEINFO));
-}
-
 std::vector<MODULEENTRY32*> GetModuleList(HMODULE skipModule)
 {
 	auto moduleList = std::vector<MODULEENTRY32*>();
@@ -88,7 +81,6 @@ SectionInfo* GetSectionInformation(MODULEENTRY32* Module)
 		if (strcmp(reinterpret_cast<char const*>(Section[i].Name), ".rdata") == 0)
 		{
 			sectionInfo->RDATA.base = Section[i].VirtualAddress + reinterpret_cast<uintptr_t>(MBase);
-			MBase;
 			sectionInfo->RDATA.size = Section[i].SizeOfRawData;
 			sectionInfo->RDATA.end = sectionInfo->RDATA.base + sectionInfo->RDATA.size - 1;
 			RDATA_found = true;
