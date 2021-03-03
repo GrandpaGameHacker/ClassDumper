@@ -296,7 +296,7 @@ void DumpInheritanceInfo(uintptr_t VTable)
 	}
 	// iterate and dump all base classes
 	unsigned long prevMemberDisplacement = 0;
-	unsigned long treeIndex = 0;
+	unsigned long tabIndex = 0;
 	for (unsigned long i = 1; i < classMeta.numBaseClasses; i++)
 	{
 		BaseClassDescriptor* pCurrentBaseClass = classMeta.GetBaseClass(i);
@@ -311,12 +311,12 @@ void DumpInheritanceInfo(uintptr_t VTable)
 			InheritanceLog << hex << "0x" << memberDisplacement;
 			// if pdisp is -1, the vtable offset for base class is actually mdisp
 			if (memberDisplacement == prevMemberDisplacement) {
-				treeIndex++;
+				tabIndex++;
 			}
 			else {
-				treeIndex = 1;
+				tabIndex = 1;
 			}
-			for (auto i = 0; i < treeIndex; i++) {
+			for (auto i = 0; i < tabIndex; i++) {
 				InheritanceLog << "\t";
 			}
 		}
