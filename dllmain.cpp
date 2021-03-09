@@ -70,7 +70,7 @@ DWORD WINAPI DllThread(void* lpParam)
 	const auto end = chrono::high_resolution_clock::now();
 	g_console.FWrite("[+] Took %d milliseconds\n", chrono::duration_cast<chrono::milliseconds>(end - start).count());
 	g_console.Write("[i] Output will be in Desktop\\Class_Dumper\\...");
-	g_console.WaitInput();
 	CloseLogs();
+	g_console.WaitInput();
 	FreeLibraryAndExitThread(hModule, 0);
 }

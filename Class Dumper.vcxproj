@@ -209,6 +209,8 @@
     <ClCompile Include="ModuleUtils.cpp" />
     <ClCompile Include="Dumper.cpp" />
     <ClCompile Include="StringConversions.cpp" />
+    <ClCompile Include="Symbols.cpp" />
+    <ClCompile Include="VTables.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Console.h" />
@@ -220,6 +222,8 @@
     <ClInclude Include="ModuleUtils.h" />
     <ClInclude Include="Dumper.h" />
     <ClInclude Include="StringConversions.h" />
+    <ClInclude Include="Symbols.h" />
+    <ClInclude Include="VTables.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
